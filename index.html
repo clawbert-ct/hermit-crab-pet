@@ -1,0 +1,2953 @@
+<!DOCTYPE html>
+<!-- VERSION v44 - vacancy dance: just the shell drifts, no bg crabs -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pet — Hermit Crab v0.2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a2332;
+    color: #e0e8ef;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: background 2s ease;
+  }
+  body.tier-found { background: #1a2332; }
+  body.tier-shared { background: #152838; }
+  body.tier-cobuilt { background: #0a1520; }
+  #pet-window {
+    position: relative;
+    width: 320px;
+    height: 480px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,0,0,0.3);
+    transition: box-shadow 2s ease;
+  }
+  body.tier-found #pet-window { box-shadow: 0 0 40px rgba(255,200,100,0.15); }
+  body.tier-shared #pet-window { box-shadow: 0 0 40px rgba(69,170,242,0.15); }
+  body.tier-cobuilt #pet-window { box-shadow: 0 0 40px rgba(100,255,200,0.2); }
+  canvas { display: block; width: 320px; height: 480px; }
+  #shell-name {
+    position: absolute;
+    bottom: 8px;
+    left: 12px;
+    font-size: 10px;
+    opacity: 0.6;
+  }
+  #depth-label {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 9px;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #stats-panel {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    width: 320px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 10px;
+  }
+  .stat-bar { height: 3px; border-radius: 1px; background: rgba(255,255,255,0.08); margin-top: 3px; overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 1px; transition: width 0.5s ease; }
+  .stat-label { font-size: 8px; opacity: 0.5; letter-spacing: 0.5px; }
+  .stat-value { font-size: 12px; font-weight: 600; }
+  #actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 6px;
+    width: 320px;
+  }
+  .action-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #a0b0c0;
+    border-radius: 10px;
+    padding: 8px 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .action-btn:hover { background: rgba(255,255,255,0.12); color: #e0e8ef; transform: translateY(-1px); }
+  .action-btn:active { transform: translateY(0); }
+  .action-btn.feed { border-color: rgba(255,180,50,0.3); }
+  .action-btn.visit { border-color: rgba(100,200,255,0.3); }
+  .action-btn.clean { border-color: rgba(100,255,150,0.3); }
+  .action-btn.inspect { border-color: rgba(200,150,255,0.3); }
+  #info-bar {
+    margin-top: 8px;
+    width: 320px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    opacity: 0.5;
+    gap: 4px;
+  }
+  #streak-display {
+    margin-top: 4px;
+    font-size: 10px;
+    text-align: center;
+  }
+  #streak-dots { letter-spacing: 2px; }
+</style>
+</head>
+<body class="tier-found">
+
+<div id="pet-window">
+  <canvas id="pet-canvas" width="640" height="960"></canvas>
+  <div id="shell-name">🧴 Soda Bottle Cap</div>
+  <div id="depth-label">FOUND</div>
+</div>
+
+<div id="stats-panel">
+  <div class="stat">
+    <div class="stat-label">HUNGER</div>
+    <div class="stat-value" id="hunger-val">80</div>
+    <div class="stat-bar"><div class="stat-fill" id="hunger-bar" style="width:80%;background:#f39c12"></div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">HAPPY</div>
+    <div class="stat-value" id="happy-val">70</div>
+    <div class="stat-bar"><div class="stat-fill" id="happy-bar" style="width:70%;background:#2ecc71"></div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">HEALTH</div>
+    <div class="stat-value" id="health-val">100</div>
+    <div class="stat-bar"><div class="stat-fill" id="health-bar" style="width:100%;background:#e74c3c"></div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">TRUST</div>
+    <div class="stat-value" id="trust-val">10</div>
+    <div class="stat-bar"><div class="stat-fill" id="trust-bar" style="width:10%;background:#9b59b6"></div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">FINDS</div>
+    <div class="stat-value" id="finds-val">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">BEACH</div>
+    <div class="stat-value" id="beach-val">100</div>
+    <div class="stat-bar"><div class="stat-fill" id="beach-bar" style="width:100%;background:#3498db"></div></div>
+  </div>
+</div>
+
+<div id="actions">
+  <button class="action-btn feed" onclick="feedPet()">🐟 Flakes</button>
+  <button class="action-btn visit" onclick="petCrab()" id="pet-btn">🤗 Pet</button>
+  <button class="action-btn clean" onclick="cleanBeach()">🧹 Clean</button> <!-- Each click removes one algae patch -->
+  <button class="action-btn inspect" onclick="toggleCollection()">🐚 Shells</button>
+  <button class="action-btn inspect" onclick="toggleBeachCollection()">🌊 Finds</button>
+</div>
+
+<div id="info-bar">
+  <span id="care-level">Found</span>
+  <span id="trust-level" style="font-size:8px">Trust: Wary</span>
+  <span id="streak-display">🔥 <span id="streak-dots">○○○○○○○</span></span>
+</div>
+
+<script src="shell-shapes.js?t=1781244250"></script>
+<script src="crab-compositing.js?v=67&t=1781426400"></script>
+<script src="assessment-animation.js?v=8&t=1781244250"></script>
+<script>
+// ============================================================
+// AGENT PET v0.2 — Hermit Crab with Depth Progression
+// Found (warm tidepool) → Shared (mid-depth) → Co-built (deep sea)
+// ============================================================
+
+const canvas = document.getElementById('pet-canvas');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 960; // 2x for retina
+canvas.width = W; canvas.height = H;
+
+// ---- SOUND SYSTEM (Web Audio API - procedural, no files!) ----
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type='sine', vol=0.15) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function playNoise(duration, vol=0.05) {
+  try {
+    const ctx = getAudio();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * vol;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  } catch(e) {}
+}
+
+// Sound effects!
+const SFX = {
+  pet:   () => { playTone(600, 0.12, 'sine', 0.1); playTone(800, 0.15, 'sine', 0.08); },
+  feed:  () => { playTone(440, 0.08, 'triangle', 0.12); playTone(550, 0.1, 'triangle', 0.1); },
+  dig:   () => { playNoise(0.15, 0.08); playTone(150, 0.1, 'sawtooth', 0.05); },
+  clean: () => { playNoise(0.1, 0.04); playTone(900, 0.08, 'sine', 0.06); },
+  find:  () => { playTone(523, 0.1, 'sine', 0.12); setTimeout(()=>playTone(659, 0.1, 'sine', 0.12), 100); setTimeout(()=>playTone(784, 0.15, 'sine', 0.15), 200); },
+  shell: () => { playTone(392, 0.15, 'sine', 0.1); setTimeout(()=>playTone(523, 0.15, 'sine', 0.12), 150); setTimeout(()=>playTone(659, 0.2, 'sine', 0.15), 300); },
+  upgrade: () => { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'sine',0.15),i*120)); },
+  vacancy: () => { playTone(330, 0.2, 'triangle', 0.08); playTone(440, 0.25, 'triangle', 0.06); },
+  assess: () => { playTone(440, 0.05, 'square', 0.05); setTimeout(()=>playTone(550, 0.05, 'square', 0.05), 80); },
+  kelp:  () => { playNoise(0.08, 0.03); playTone(700, 0.06, 'sine', 0.05); },
+  bubble: () => { playTone(1200, 0.05, 'sine', 0.03); playTone(1800, 0.04, 'sine', 0.02); }
+};
+
+// ---- STATE ----
+let state = {
+  stats: { hunger: 80, happiness: 70, health: 100, energy: 90, trust: 10 },
+  shell: { name: "Soda Bottle Cap", tier: 0, type: "bottle_cap", upgrading: false, upgradeProgress: 0 },
+  care: { visits: 0, feeds: 0, streak: 0, consistentDays: 0, longestStreak: 0 },
+  beach: { cleanliness: 100, kelpGrowth: 0, overgrowth: [], washedUpItems: [], lastFind: null, collectibles: [], foundItems: [], digMarks: [] },
+  anemone: null,
+  pendingShell: null,
+  discoveredShells: [],
+  foodItems: [],
+  eatTimer: 0,
+  mood: "curious",
+  activity: "exploring",
+  time: 0,
+  showCollection: false,
+  showBeachCollection: false,
+  collection: { items: [], counts: {} },
+  // ---- VACANCY CHAIN ----
+  // When crab upgrades, old shell cascades to smaller crabs
+  vacancyShells: [], // shells drifting to background crabs
+  bgCrabs: [], // small background hermit crabs that receive old shells
+  vacancyChainActive: false,
+  vacancyChainTimer: 0,
+  celebrationBurst: null // golden sparkles when shell upgrades
+};
+
+// ---- SHELL TIERS ----
+const SHELL_TIERS = [
+  { tier: 0, name: "Soda Bottle Cap", type: "bottle_cap", minTrust: 0, color: "#B0B0B0", accent: "#808080", desc: "A dented cap. Not a shell — plastic, but it's home." },
+  { tier: 1, name: "Found Shell", type: "turbo", minTrust: 20, color: "#d97706", accent: "#78350f", desc: "A real turbo shell. Small but genuine." },
+  { tier: 2, name: "Rose Spike", type: "rose_spike", minTrust: 40, color: "#f472b6", accent: "#be185d", desc: "Pink with bold spikes. Fits like it was made for you." },
+  { tier: 3, name: "Blue Racer", type: "blue_racer", minTrust: 55, color: "#06b6d4", accent: "#155e75", desc: "Sleek and fast. Cyan like open water." },
+  { tier: 4, name: "Spotted Helmet", type: "spotted_helmet", minTrust: 70, color: "#a16207", accent: "#713f12", desc: "Brown and spotted. Built like a fortress." },
+  { tier: 5, name: "Purple Cone", type: "purple_cone", minTrust: 85, color: "#8b5cf6", accent: "#5b21b6", desc: "Purple spire. Ancient and mysterious." },
+  { tier: 6, name: "Carcinoecium", type: "carcinoecium", minTrust: 95, color: "#22c55e", accent: "#14532d", desc: "Not just a shell — a home co-built with anemone." }
+];
+
+// ---- DEPTH PROGRESSION ----
+const DEPTH_TIERS = {
+  found: {
+    label: "FOUND",
+    bg: ["#1a3a4a", "#2d6a7a"],
+    water: ["#4a9aba", "#6ab8d8"],
+    sand: "#f0d4a0",
+    sky: ["#87CEEB", "#b8e4f0"],
+    particles: "bubbles",
+    lightLevel: 1.0,
+    description: "Warm tidepool"
+  },
+  shared: {
+    label: "SHARED",
+    bg: ["#0d2a3a", "#1a4a5a"],
+    water: ["#2a6a8a", "#4a8aaa"],
+    sand: "#c0a870",
+    sky: ["#5a8aaa", "#7aaac0"],
+    particles: "bubbles",
+    lightLevel: 0.7,
+    description: "Mid-depth — anemone companion"
+  },
+  cobuilt: {
+    label: "CO-BUILT",
+    bg: ["#050d15", "#0a1a2a"],
+    water: ["#0a2040", "#103050"],
+    sand: "#606050",
+    sky: ["#102030", "#0a1520"],
+    particles: "bioluminescence",
+    lightLevel: 0.3,
+    description: "Deep sea — bioluminescent glow"
+  }
+};
+
+function getDepthTier() {
+  // Depth is about TRUST, not click count
+  if (state.stats.trust >= 70 && state.anemone) return 'cobuilt';
+  if (state.stats.trust >= 30) return 'shared';
+  return 'found';
+}
+
+// ---- CRAB DRAWING ----
+let crabX = W * 0.45, crabY = H * 0.45; // Crab starts on visible sand
+let crabTargetX = crabX, crabTargetY = crabY;
+let crabFacing = 1; // 1 = right, -1 = left
+let crabWalkFrame = 0;
+let crabBreathe = 0;
+let crabEyeOffset = 0;
+let isInspecting = false;
+let inspectProgress = 0;
+let isDigging = false;
+let digTimer = 0;
+let digParticles = [];
+let digSpotX = 0, digSpotY = 0;
+
+function drawCrab(tier) {
+  const tierData = DEPTH_TIERS[tier];
+  const scale = 1 + state.shell.tier * 0.15;
+  
+  ctx.save();
+  ctx.translate(crabX, crabY);
+  ctx.scale(crabFacing * scale, scale);
+  
+  // Breathing animation
+  crabBreathe += 0.03;
+  const breathe = Math.sin(crabBreathe) * 2;
+  
+  // GLOW — makes crab visible in ALL tiers, especially dark ones
+  const glowSize = tier === 'cobuilt' ? 50 : tier === 'shared' ? 35 : 20;
+  const glowAlpha = tier === 'cobuilt' ? 0.25 : tier === 'shared' ? 0.15 : 0.06;
+  const glowGrad = ctx.createRadialGradient(0, 5, 5, 0, 5, glowSize);
+  glowGrad.addColorStop(0, `rgba(232, 120, 90, ${glowAlpha})`);
+  glowGrad.addColorStop(1, 'rgba(232, 120, 90, 0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(-glowSize, -glowSize, glowSize * 2, glowSize * 2);
+  
+  // Always-visible outline for dark backgrounds
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 16, 14 + breathe, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255, 180, 140, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // --- SHELL ---
+  // Draw shell based on tier — now with REAL SPIRALS from Erinem's SVGs!
+  const shellScale = 1 + state.shell.tier * 0.08;
+  
+  if (state.shell.tier === 0) {
+    // Soda bottle cap — cheap, metallic, sad (keep as flat cap)
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 28, 20, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#B0B0B0';
+    ctx.fill();
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Crinkle edge
+    ctx.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const r = 28 + Math.sin(i * 3) * 2;
+      ctx.lineTo(Math.cos(angle) * r, -5 + Math.sin(angle) * 20);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#909090';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.fillStyle = '#606060';
+    ctx.font = '4px sans-serif';
+    ctx.fillText('COLA', -8, -3);
+  } else if (state.shell.tier === 1) {
+    // Amber Conch — first real shell with spiral
+    const grad = ctx.createLinearGradient(-20, -30, 20, 20);
+    grad.addColorStop(0, '#f59e0b');
+    grad.addColorStop(0.5, '#d97706');
+    grad.addColorStop(1, '#92400e');
+    // Body whorl
+    ctx.beginPath();
+    ctx.moveTo(-22, -5);
+    ctx.bezierCurveTo(-26, -25, 10, -30, 22, -12);
+    ctx.bezierCurveTo(28, 2, 18, 15, -5, 15);
+    ctx.bezierCurveTo(-25, 15, -28, 5, -22, -5);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Spire
+    ctx.beginPath();
+    ctx.moveTo(-5, -22);
+    ctx.bezierCurveTo(0, -30, 5, -25, 3, -18);
+    ctx.lineTo(-8, -16);
+    ctx.bezierCurveTo(-10, -22, -8, -26, -5, -22);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.stroke();
+    // Aperture
+    ctx.beginPath();
+    ctx.ellipse(-18, 5, 6, 8, 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = '#451a03';
+    ctx.fill();
+    ctx.strokeStyle = '#fcd34d';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Ridge lines
+    ctx.beginPath();
+    ctx.moveTo(-18, -8);
+    ctx.bezierCurveTo(-8, -12, 8, -10, 15, -5);
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else if (state.shell.tier === 2) {
+    // Pink Moon Snail — smooth and polished
+    const grad = ctx.createLinearGradient(-20, -25, 20, 20);
+    grad.addColorStop(0, '#fdf2f8');
+    grad.addColorStop(0.4, '#f472b6');
+    grad.addColorStop(1, '#be185d');
+    // Main body
+    ctx.beginPath();
+    ctx.moveTo(-5, -28);
+    ctx.bezierCurveTo(25, -22, 30, 5, 15, 18);
+    ctx.bezierCurveTo(-5, 22, -28, 10, -25, -8);
+    ctx.bezierCurveTo(-23, -22, -15, -28, -5, -28);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // Spines (mini)
+    const miniSpines = [[20,-18,26,-24,22,-10], [25,-5,30,-8,22,2], [18,10,24,15,12,16], [-12,14,-18,20,-8,12], [-22,2,-28,4,-18,-4]];
+    miniSpines.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s[0], s[1]);
+      ctx.lineTo(s[2], s[3]);
+      ctx.lineTo(s[4], s[5]);
+      ctx.fillStyle = '#f472b6';
+      ctx.fill();
+      ctx.strokeStyle = '#be185d';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    });
+    // Spiral line
+    ctx.beginPath();
+    ctx.moveTo(-5, -25);
+    ctx.bezierCurveTo(5, -15, -5, 0, -14, 8);
+    ctx.strokeStyle = 'rgba(131, 24, 67, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Aperture
+    ctx.beginPath();
+    ctx.ellipse(-15, 5, 6, 8, 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = '#4c0519';
+    ctx.fill();
+    ctx.strokeStyle = '#fff1f2';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  } else if (state.shell.tier === 3) {
+    // Golden Spotted Turbano — fortress
+    const grad = ctx.createRadialGradient(-5, -8, 3, 0, 0, 28);
+    grad.addColorStop(0, '#fef08a');
+    grad.addColorStop(0.7, '#eab308');
+    grad.addColorStop(1, '#854d0e');
+    // Main body
+    ctx.beginPath();
+    ctx.moveTo(-5, -28);
+    ctx.bezierCurveTo(25, -25, 30, 5, 20, 18);
+    ctx.bezierCurveTo(-5, 25, -28, 10, -25, -8);
+    ctx.bezierCurveTo(-22, -22, -15, -28, -5, -28);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#713f12';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Spots
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const sx = -18 + c * 12 + (r % 2) * 6;
+        const sy = -18 + r * 10;
+        const dist = Math.sqrt(sx * sx + (sy + 5) * (sy + 5));
+        if (dist < 24) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.85)';
+          ctx.fill();
+        }
+      }
+    }
+    // Highlight
+    ctx.beginPath();
+    ctx.ellipse(5, -15, 8, 12, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fill();
+    // Aperture
+    ctx.beginPath();
+    ctx.ellipse(-18, 5, 6, 8, 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = '#450a0a';
+    ctx.fill();
+    ctx.strokeStyle = '#a16207';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  } else {
+    // Teal Nautilus with gold — Carcinoecium deep-sea shell
+    const grad = ctx.createLinearGradient(-20, -25, 20, 20);
+    grad.addColorStop(0, '#2dd4bf');
+    grad.addColorStop(0.5, '#0ea5e9');
+    grad.addColorStop(1, '#312e81');
+    // Main spiral body
+    ctx.beginPath();
+    ctx.moveTo(-5, -28);
+    ctx.bezierCurveTo(20, -28, 28, -5, 22, 12);
+    ctx.bezierCurveTo(10, 22, -18, 18, -24, 0);
+    ctx.bezierCurveTo(-28, -15, -15, -25, -5, -28);
+    // Inner spiral
+    ctx.bezierCurveTo(5, -20, 10, -10, 8, 0);
+    ctx.bezierCurveTo(6, 8, -5, 10, -10, 5);
+    ctx.bezierCurveTo(-14, 0, -10, -8, -4, -6);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    // Gold spiral arms (mini)
+    const arms = [[-5,-26, 2,-18, -2,-10], [16,-22, 8,-14, 12,-6], [22,-8, 14,-4, 10,4]];
+    arms.forEach(a => {
+      ctx.beginPath();
+      ctx.moveTo(a[0], a[1]);
+      ctx.quadraticCurveTo(a[2], a[3], a[4], a[5]);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+    // Highlight
+    ctx.beginPath();
+    ctx.ellipse(5, -15, 7, 10, -0.2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fill();
+    // Anemone spots on shell
+    for (let i = 0; i < 3; i++) {
+      const ax = -8 + i * 10;
+      const ay = -14 + i * 3;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 150, 180, 0.5)';
+      ctx.fill();
+      // Tentacles
+      for (let t = 0; t < 4; t++) {
+        const ta = (t / 4) * Math.PI * 2 + state.time * 0.02;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + Math.cos(ta) * 5, ay + Math.sin(ta) * 5);
+        ctx.strokeStyle = 'rgba(255, 150, 200, 0.6)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+    // Bioluminescent glow
+    const glowGrad = ctx.createRadialGradient(-10, 5, 2, -10, 5, 18);
+    glowGrad.addColorStop(0, 'rgba(45, 212, 191, 0.5)');
+    glowGrad.addColorStop(0.5, 'rgba(14, 165, 233, 0.15)');
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(-10, 5, 18, 0, Math.PI * 2);
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+  }
+  // --- LEGS ---
+  ctx.strokeStyle = '#E8A060';
+  ctx.lineWidth = 2.5;
+  const legPositions = [
+    { x: -15, y: 5, angle: 0.3 },
+    { x: -12, y: 10, angle: 0.5 },
+    { x: -8, y: 14, angle: 0.7 },
+    { x: 15, y: 5, angle: -0.3 },
+    { x: 12, y: 10, angle: -0.5 },
+    { x: 8, y: 14, angle: -0.7 }
+  ];
+  legPositions.forEach((leg, i) => {
+    const walkOffset = Math.sin(crabWalkFrame * 0.15 + i) * 3;
+    ctx.beginPath();
+    ctx.moveTo(leg.x, leg.y);
+    ctx.lineTo(leg.x + Math.cos(leg.angle) * 18 + walkOffset, leg.y + Math.sin(leg.angle) * 18);
+    ctx.stroke();
+  });
+  
+  // --- BODY ---
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 12, 10 + breathe, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#E8785A';
+  ctx.fill();
+  ctx.strokeStyle = '#C05540';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // --- CLAWS (asymmetric!) ---
+  // Big claw (left)
+  ctx.beginPath();
+  ctx.moveTo(-14, 2);
+  ctx.quadraticCurveTo(-22, -5, -18, -10);
+  ctx.quadraticCurveTo(-12, -7, -14, 2);
+  ctx.fillStyle = '#E8785A';
+  ctx.fill();
+  ctx.strokeStyle = '#C05540';
+  ctx.stroke();
+  
+  // Small claw (right)
+  ctx.beginPath();
+  ctx.moveTo(12, 4);
+  ctx.quadraticCurveTo(18, -1, 15, -5);
+  ctx.quadraticCurveTo(10, -3, 12, 4);
+  ctx.fill();
+  ctx.stroke();
+  
+  // --- EYE STALKS ---
+  const stalkSway = Math.sin(state.time * 0.02) * 2;
+  // Left stalk
+  ctx.beginPath();
+  ctx.moveTo(-6, -2);
+  ctx.lineTo(-8 + stalkSway, -18);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#C05540';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-8 + stalkSway, -20, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(-7 + stalkSway, -21, 1, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFF';
+  ctx.fill();
+  
+  // Right stalk  
+  ctx.beginPath();
+  ctx.moveTo(6, -2);
+  ctx.lineTo(10 + stalkSway, -17);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#C05540';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(10 + stalkSway, -19, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(11 + stalkSway, -20, 1, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFF';
+  ctx.fill();
+  
+  // --- ANTENNAE ---
+  ctx.beginPath();
+  ctx.moveTo(-4, -8);
+  ctx.quadraticCurveTo(-6, -25, -3, -30 + Math.sin(state.time * 0.03) * 3);
+  ctx.strokeStyle = '#C05540';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(4, -8);
+  ctx.quadraticCurveTo(8, -25, 6, -30 + Math.sin(state.time * 0.03 + 1) * 3);
+  ctx.stroke();
+  
+  // --- ANEMONE (if present) ---
+  if (state.anemone) {
+    drawAnemone(tier);
+  }
+  
+  ctx.restore();
+}
+
+function drawAnemone(tier) {
+  const anemoneX = 15;
+  const anemoneY = -15;
+  const tentacleCount = 8;
+  const time = state.time * 0.04;
+  
+  // Base
+  ctx.beginPath();
+  ctx.arc(anemoneX, anemoneY + 5, 8, 0, Math.PI, false);
+  ctx.fillStyle = tier === 'cobuilt' ? 'rgba(150, 200, 255, 0.4)' : '#F0A0B0';
+  ctx.fill();
+  
+  // Tentacles
+  for (let i = 0; i < tentacleCount; i++) {
+    const angle = (i / tentacleCount) * Math.PI - Math.PI * 0.3;
+    const tentacleLen = 12 + Math.sin(time + i) * 4;
+    const endX = anemoneX + Math.cos(angle + Math.sin(time + i * 0.5) * 0.2) * tentacleLen;
+    const endY = anemoneY + 2 + Math.sin(angle) * tentacleLen * 0.4;
+    
+    ctx.beginPath();
+    ctx.moveTo(anemoneX + Math.cos(angle) * 5, anemoneY + 3);
+    ctx.quadraticCurveTo(
+      anemoneX + Math.cos(angle) * tentacleLen * 0.6,
+      anemoneY - 5 + Math.sin(time + i) * 2,
+      endX,
+      endY
+    );
+    ctx.strokeStyle = tier === 'cobuilt' 
+      ? `rgba(100, 255, 200, ${0.6 + Math.sin(time + i) * 0.3})`
+      : `rgba(255, 150, 180, ${0.6 + Math.sin(time + i) * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Glow for co-built tier
+    if (tier === 'cobuilt') {
+      ctx.beginPath();
+      ctx.arc(endX, endY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(100, 255, 200, ${0.3 + Math.sin(time + i) * 0.2})`;
+      ctx.fill();
+    }
+  }
+}
+
+// ---- HABITAT DRAWING (SIDE VIEW / CROSS-SECTION) ----
+function drawHabitat(tier) {
+  const tierData = DEPTH_TIERS[tier];
+  const t = state.time * 0.001;
+  
+  // --- BACKGROUND: Sky/above water ---
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.25);
+  skyGrad.addColorStop(0, tierData.sky[0]);
+  skyGrad.addColorStop(1, tierData.sky[1]);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H * 0.15);
+  
+  // --- WATER (below waterline, fills most of the frame) ---
+  const waterTop = H * 0.08;
+  const waterGrad = ctx.createLinearGradient(0, waterTop, 0, H);
+  waterGrad.addColorStop(0, tierData.water[0]);
+  waterGrad.addColorStop(1, tierData.water[1]);
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, waterTop, W, H - waterTop);
+  
+  // --- TIDEPOOL BOWL (side cross-section) ---
+  // Erinem's design: a bowl you look INTO from the side
+  // Bottom curve of the tidepool
+  const bowlLeft = W * 0.02;
+  const bowlRight = W * 0.98;
+  const bowlBottom = H * 0.78;
+  const bowlMidY = H * 0.28; // where sand meets water — wider island, less sky
+  
+  // Sand floor (the "island" in the tidepool)
+  ctx.beginPath();
+  ctx.moveTo(bowlLeft, bowlBottom);
+  ctx.quadraticCurveTo(W * 0.25, bowlMidY + 55, W * 0.5, bowlMidY); // left slope — gentler
+  ctx.quadraticCurveTo(W * 0.75, bowlMidY - 5, bowlRight, bowlBottom); // right slope — wider peak
+  ctx.lineTo(bowlRight + 10, bowlBottom + 10);
+  ctx.lineTo(bowlLeft - 10, bowlBottom + 10);
+  ctx.closePath();
+  ctx.fillStyle = tierData.sand;
+  ctx.fill();
+  
+  // Sand texture dots
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  for (let i = 0; i < 20; i++) {
+    const dx = bowlLeft + Math.random() * (bowlRight - bowlLeft);
+    const dy = bowlMidY + 20 + Math.random() * (bowlBottom - bowlMidY - 20);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 1 + Math.random(), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Bowl rim / edge (visible ceramic edge)
+  ctx.beginPath();
+  ctx.moveTo(bowlLeft, bowlBottom);
+  ctx.quadraticCurveTo(W * 0.5, H * 0.92, bowlRight, bowlBottom);
+  ctx.strokeStyle = tier === 'found' ? '#d4a860' : tier === 'shared' ? '#8088a0' : '#405060';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  
+  // Golden rim for found tier
+  if (tier === 'found') {
+    ctx.beginPath();
+    ctx.moveTo(bowlLeft - 5, bowlBottom + 2);
+    ctx.quadraticCurveTo(W * 0.5, H * 0.94 + 2, bowlRight + 5, bowlBottom + 2);
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  // Water surface line / meniscus
+  ctx.beginPath();
+  ctx.moveTo(0, waterTop);
+  for (let x = 0; x < W; x += 5) {
+    const wave = Math.sin(t * 2 + x * 0.02) * 3;
+    ctx.lineTo(x, waterTop + wave);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  
+  // Light rays from surface (for found/shared tiers)
+  if (tierData.lightLevel > 0.5) {
+    for (let i = 0; i < 3; i++) {
+      const rayX = W * 0.2 + i * W * 0.3;
+      const rayGrad = ctx.createLinearGradient(rayX, waterTop, rayX + 30, H * 0.45);
+      rayGrad.addColorStop(0, 'rgba(255,255,200,0.08)');
+      rayGrad.addColorStop(1, 'rgba(255,255,200,0)');
+      ctx.fillStyle = rayGrad;
+      ctx.beginPath();
+      ctx.moveTo(rayX, waterTop);
+      ctx.lineTo(rayX + 5, waterTop);
+      ctx.lineTo(rayX + 40, H * 0.45);
+      ctx.lineTo(rayX + 20, H * 0.45);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  
+  // Pink coral (found tier decoration)
+  if (tier === 'found') {
+    drawCoral(W * 0.7, bowlMidY + 10);
+  }
+  
+  // Particles
+  if (tierData.particles === 'bubbles') {
+    drawBubbles(t);
+  } else if (tierData.particles === 'bioluminescence') {
+    drawBioluminescence(t);
+  }
+}
+
+function drawCoral(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  const branches = [
+    { angle: -0.4, len: 25, thickness: 4 },
+    { angle: -0.1, len: 35, thickness: 3.5 },
+    { angle: 0.2, len: 30, thickness: 3 },
+    { angle: 0.5, len: 20, thickness: 2.5 }
+  ];
+  branches.forEach(b => {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    const endX = Math.sin(b.angle) * b.len;
+    const endY = -b.len;
+    ctx.quadraticCurveTo(endX * 0.5, endY * 0.5, endX, endY);
+    ctx.strokeStyle = '#F08090';
+    ctx.lineWidth = b.thickness;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    // Tip blob
+    ctx.beginPath();
+    ctx.arc(endX, endY, b.thickness + 1, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF9090';
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawBubbles(t) {
+  for (let i = 0; i < 8; i++) {
+    const x = W * 0.3 + Math.sin(t + i * 1.7) * W * 0.3;
+    const y = H * 0.5 + Math.cos(t * 0.7 + i * 2.1) * H * 0.2;
+    const size = 2 + Math.sin(t + i) * 1;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+  }
+}
+
+function drawBioluminescence(t) {
+  for (let i = 0; i < 15; i++) {
+    const x = W * 0.2 + Math.sin(t * 0.3 + i * 2.3) * W * 0.5;
+    const y = H * 0.4 + Math.cos(t * 0.2 + i * 1.7) * H * 0.3;
+    const size = Math.max(0.5, 1 + Math.sin(t * 0.5 + i * 3) * 2);
+    const alpha = 0.2 + Math.sin(t + i * 0.8) * 0.2;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(100, 255, 200, ${alpha})`;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(100, 255, 200, ${alpha * 0.3})`;
+    ctx.fill();
+  }
+}
+
+// ---- FOOD ITEMS (flakes, kelp chunks on the beach) ----
+function drawFoodItems() {
+  state.foodItems.forEach((food, i) => {
+    const x = food.x;
+    const y = food.y;
+    const age = state.time - food.spawnTime;
+    
+    if (food.eating) {
+      // Shrink animation while being eaten
+      food.eatProgress = Math.min(1, (food.eatProgress || 0) + 0.04);
+      if (food.eatProgress >= 1) {
+        // Remove food item when fully eaten
+        state.foodItems.splice(i, 1);
+        return;
+      }
+      const shrink = 1 - food.eatProgress;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(shrink, shrink);
+      if (food.type === 'flakes') {
+        drawFlake(0, 0, age);
+      } else {
+        drawKelpBit(0, 0, age);
+      }
+      ctx.restore();
+    } else {
+      // Food sitting on the beach, slight bob
+      const bob = Math.sin(state.time * 0.05 + i) * 2;
+      if (food.type === 'flakes') {
+        drawFlake(x, y + bob, age);
+      } else {
+        drawKelpBit(x, y + bob, age);
+      }
+    }
+  });
+}
+
+function drawFlake(x, y, age) {
+  // Fish flake — golden-brown with shimmer
+  ctx.save();
+  ctx.translate(x, y);
+  const wobble = Math.sin(age * 0.03 + x) * 0.1;
+  ctx.rotate(wobble);
+  // Main flake
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9, 5, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = '#E8B060';
+  ctx.fill();
+  ctx.strokeStyle = '#C49040';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Second flake overlapping
+  ctx.beginPath();
+  ctx.ellipse(4, -1, 7, 4, -0.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#D4A048';
+  ctx.fill();
+  ctx.stroke();
+  // Golden shimmer
+  ctx.beginPath();
+  ctx.ellipse(-1, -2, 3, 2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 230, 170, 0.5)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawKelpBit(x, y, age) {
+  // Green kelp piece
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.sin(age * 0.02) * 0.3);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#1abc9c';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(2, -2, 4, 3, 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#16a085';
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---- KELP / HARVESTABLE FOOD ----
+const kelpPositions = [
+  { x: W * 0.55, y: H * 0.48 },
+  { x: W * 0.58, y: H * 0.47 },
+  { x: W * 0.62, y: H * 0.49 }
+];
+
+function drawKelp(x, y, index) {
+  const t = state.time * 0.02;
+  const isReady = state.beach.kelpGrowth > index;
+  const height = isReady ? 7 : Math.min(Math.floor(state.beach.kelpGrowth * 7 / (index + 1)), 7);
+  if (height < 1) return;
+  
+  // Glow when ready to harvest
+  if (isReady) {
+    ctx.beginPath();
+    ctx.arc(x, y - height * 10, 15, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.08)';
+    ctx.fill();
+  }
+  
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  for (let i = 0; i < height; i++) {
+    const sway = Math.sin(t + i * 0.5) * (6 + index * 2);
+    ctx.quadraticCurveTo(x + sway, y - 10 * (i + 1), x - sway * 0.5, y - 10 * i - 15);
+  }
+  ctx.strokeStyle = isReady ? '#2ecc71' : '#27ae60';
+  ctx.lineWidth = isReady ? 3.5 : 2.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  
+  // Leaf blobs
+  for (let i = 0; i < height; i += 2) {
+    const leafY = y - 10 * i - 12;
+    const leafSway = Math.sin(t + i * 0.7) * 5;
+    ctx.beginPath();
+    ctx.ellipse(x + leafSway, leafY, 5, 3, Math.sin(t + i) * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = isReady ? '#2ecc71' : '#1abc9c';
+    ctx.fill();
+  }
+}
+
+function drawBeachItems() {
+  // Trash on the beach (at sand level)
+  if (state.beach.cleanliness < 50) {
+    const trashCount = Math.floor((100 - state.beach.cleanliness) / 20);
+    for (let i = 0; i < trashCount; i++) {
+      const x = W * 0.15 + (i * W * 0.2);
+      const y = H * 0.55 + Math.sin(i * 1.5) * 8;
+      ctx.font = '16px sans-serif';
+      const trashItems = ['\u{1F964}', '\u{1F336}', '\u{1F4C4}', '\u{1F9F4}'];
+      ctx.fillText(trashItems[i % trashItems.length], x, y);
+    }
+  }
+  
+  // Kelp — grows when beach is clean, clickable to harvest!
+  kelpPositions.forEach((pos, i) => {
+    drawKelp(pos.x, pos.y, i);
+  });
+  
+  // Beach collectibles — small items sitting on the sand
+  if (state.beach.collectibles && state.beach.collectibles.length > 0) {
+    state.beach.collectibles.forEach((item, idx) => {
+      const bob = Math.sin(state.time * 0.003 + item.x) * 1.5;
+      drawCollectibleItem(ctx, item, item.x, item.y + bob, state.time);
+    });
+  }
+  
+}
+
+// Click handler for harvesting kelp and cleaning overgrowth
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+  
+  // Block clicks during vacancy chain — let the conga line finish!
+  if (state.vacancyChainActive) return;
+  
+  // Check collection modal clicks FIRST (it's on top of everything)
+  if (state.showBeachCollection) {
+    state.showBeachCollection = false;
+    return;
+  }
+  if (state.showCollection) {
+    // Check assess button
+    if (state.assessButton) {
+      const ab = state.assessButton;
+      if (clickX >= ab.x && clickX <= ab.x + ab.w && clickY >= ab.y && clickY <= ab.y + ab.h) {
+        if (state.pendingShell && state.pendingShell.settled && !state.shell.upgrading) {
+          state.showCollection = false;
+          startShellAssessment();
+        }
+        return; // Don't process other clicks
+      }
+    }
+    // Check shell tier buttons
+    if (state.shellButtons) {
+      for (const btn of state.shellButtons) {
+        if (btn && btn.unlocked) {
+          // Tapped an unlocked shell — could show details later
+        }
+      }
+    }
+    return; // Don't process habitat clicks when modal is open
+  }
+  
+  // Check pending shell on beach — tap to assess!
+  if (state.pendingShell && state.pendingShell.settled && !state.shell.upgrading) {
+    const dx = clickX - state.pendingShell.x;
+    const dy = clickY - state.pendingShell.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 40) {
+      startShellAssessment();
+      return;
+    }
+  }
+  
+  // Check kelp clicks first
+  kelpPositions.forEach((pos, i) => {
+    const dx = clickX - pos.x;
+    const dy = clickY - pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 30 && state.beach.kelpGrowth > i) {
+      harvestKelp(i);
+    }
+  });
+  
+  // Check sand dig — click on sand AWAY from crab to dig!
+  // (Clicking near the crab = pet, not dig)
+  const distToCrab = Math.sqrt((clickX - crabX) ** 2 + (clickY - crabY) ** 2);
+  if (clickY > H * 0.32 && distToCrab > 35 && !isDigging && !state.shell.upgrading && !isInspecting && !state.digPending) {
+    // Crab walks toward click spot, then digs when it arrives
+    crabTargetX = clickX;
+    crabTargetY = clickY;
+    state.digPending = true;
+    return;
+  }
+
+  // Check beach collectible clicks — tap to collect!
+  if (state.beach.collectibles && state.beach.collectibles.length > 0) {
+    const toCollect = [];
+    state.beach.collectibles = state.beach.collectibles.filter((item, idx) => {
+      const dx = clickX - item.x;
+      const dy = clickY - item.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 20) {
+        toCollect.push(item);
+        return false; // Remove from beach
+      }
+      return true;
+    });
+    toCollect.forEach(item => {
+      state.stats.happiness = Math.min(100, state.stats.happiness + 1);
+    });
+  }
+  
+  // Check overgrowth clicks — click on algae to remove it (generous click area)
+  state.beach.overgrowth = state.beach.overgrowth.filter((patch, i) => {
+    const dx = clickX - patch.x;
+    const dy = clickY - patch.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < patch.size + 20) { // Generous click area
+      // Cleaned this patch!
+      state.beach.cleanliness = Math.min(100, state.beach.cleanliness + 5);
+      state.stats.happiness = Math.min(100, state.stats.happiness + 1);
+      return false; // Remove it
+    }
+    return true;
+  });
+});
+
+function harvestKelp(index) {
+  SFX.kelp();
+  state.beach.kelpGrowth = Math.max(0, state.beach.kelpGrowth - 1);
+  state.stats.hunger = Math.min(100, state.stats.hunger + 20); // Better than fish flakes!
+  state.stats.happiness = Math.min(100, state.stats.happiness + 8);
+  state.care.feeds++;
+  updateStreakDots();
+  // Spawn kelp bit near the harvested kelp
+  state.foodItems.push({
+    type: 'kelp',
+    x: kelpPositions[index].x + (Math.random() - 0.5) * 10,
+    y: kelpPositions[index].y + 5,
+    spawnTime: state.time,
+    eating: false,
+    eatProgress: 0
+  });
+  // Crab walks toward where the kelp was
+  crabTargetX = kelpPositions[index].x;
+  crabTargetY = kelpPositions[index].y - 10;
+  updateUI();
+}
+
+// ---- GAME LOGIC ----
+function feedPet() {
+  SFX.feed();
+  const foodBonus = 15;
+  state.stats.hunger = Math.min(100, state.stats.hunger + foodBonus);
+  state.stats.happiness = Math.min(100, state.stats.happiness + 5);
+  state.care.feeds++;
+  state.stats.trust = Math.min(100, state.stats.trust + 1);
+  updateStreakDots();
+  // Spawn 2-3 flakes near the crab on the sand
+  const flakeCount = 2 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < flakeCount; i++) {
+    const fx = W * 0.3 + Math.random() * W * 0.4;
+    const fy = H * 0.45 + Math.random() * H * 0.12;
+    state.foodItems.push({
+      type: 'flakes',
+      x: fx,
+      y: fy,
+      spawnTime: state.time,
+      eating: false,
+      eatProgress: 0
+    });
+  }
+  // Crab walks toward food
+  const lastFood = state.foodItems[state.foodItems.length - 1];
+  crabTargetX = lastFood.x;
+  crabTargetY = lastFood.y;
+  updateUI();
+}
+
+let petCooldown = 0; // 0 = ready, >0 = cooling down (frames)
+const PET_COOLDOWN_MAX = 45; // ~0.75 seconds at 60fps
+let petAnimTimer = 0; // Pet animation timer
+
+function petCrab() {
+  // Can't pet while cooling down
+  if (petCooldown > 0) return;
+  if (state.shell.upgrading) return; // Don't interrupt assessment!
+  
+  petCooldown = PET_COOLDOWN_MAX;
+  petAnimTimer = 20; // Show pet animation for 20 frames
+  SFX.pet();
+  
+  state.stats.happiness = Math.min(100, state.stats.happiness + 10);
+  const trustGain = state.stats.trust < 30 ? 3 : state.stats.trust < 60 ? 2 : 1;
+  state.stats.trust = Math.min(100, state.stats.trust + trustGain);
+  state.care.visits++;
+  state.care.streak++;
+  // Chance of shell washing up during a pet (the ocean delivers!)
+  const nextShell = SHELL_TIERS.find(t => t.minTrust <= state.stats.trust && t.tier > state.shell.tier);
+  if (nextShell && !state.pendingShell && Math.random() < 0.2) {
+    spawnShellWashUp(nextShell);
+  }
+  updateStreakDots();
+  // Crab perks up and comes toward you when you pet it
+  crabTargetX = W * 0.45;
+  crabTargetY = H * 0.52;
+  // Anemone reacts too if present
+  if (state.anemone) {
+    state.anemone.glow = Math.min(1, (state.anemone.glow || 0) + 0.3);
+  }
+  updateUI();
+}
+
+function trySpawnCollectible() {
+  const roll = Math.random();
+  const entries = Object.entries(BEACH_COLLECTIBLES);
+  let pool;
+  if (roll < 0.50) pool = entries.filter(([_, c]) => c.rarity === 'common');
+  else if (roll < 0.80) pool = entries.filter(([_, c]) => c.rarity === 'uncommon');
+  else if (roll < 0.95) pool = entries.filter(([_, c]) => c.rarity === 'rare');
+  else pool = entries.filter(([_, c]) => c.rarity === 'legendary');
+  const [id, item] = pool[Math.floor(Math.random() * pool.length)];
+  return { id, ...item, found: true };
+}
+
+function drawCollectibleItem(ctx, collItem, x, y, time) {
+  const def = BEACH_COLLECTIBLES[collItem.id] || Object.values(BEACH_COLLECTIBLES)[0];
+  const rarityColors = { common: '#aaa', uncommon: '#4da6ff', rare: '#ff4dff', legendary: '#ffaa00' };
+  const color = def.color || rarityColors[def.rarity];
+  const size = def.rarity === 'legendary' ? 16 : def.rarity === 'rare' ? 13 : def.rarity === 'uncommon' ? 11 : 9;
+  
+  // Sparkle for rare+
+  if (def.rarity === 'rare' || def.rarity === 'legendary') {
+    for (let i = 0; i < 3; i++) {
+      const sx = x + (Math.sin(time * 0.02 + i * 2) * size);
+      const sy = y + (Math.cos(time * 0.025 + i * 1.5) * size * 0.6);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = def.rarity === 'legendary' ? 'rgba(255, 200, 50, 0.7)' : 'rgba(200, 150, 255, 0.5)';
+      ctx.fill();
+    }
+  }
+  
+  // Solid circle background so items pop against sand
+  ctx.beginPath();
+  ctx.arc(x, y, size + 2, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${color === '#60a5fa' ? '96,165,250' : color === '#ffaa00' ? '255,170,0' : color === '#ff4dff' ? '255,77,255' : '194,178,140'}, 0.6)`;
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = def.rarity === 'legendary' ? 2 : 1.5;
+  ctx.stroke();
+  
+  // Item icon (emoji)
+  ctx.font = `${Math.floor(size * 1.8)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(def.icon, x, y);
+}
+
+function cleanBeach() {
+  SFX.clean();
+  // Clean removes algae — that's it. Kelp grows naturally over time, not from cleaning.
+  if (state.beach.overgrowth.length > 0) {
+    state.beach.overgrowth.shift();
+    state.beach.cleanliness = Math.min(100, state.beach.cleanliness + 10);
+    state.stats.happiness = Math.min(100, state.stats.happiness + 2);
+  } else {
+    state.beach.cleanliness = Math.min(100, state.beach.cleanliness + 5);
+    state.stats.happiness = Math.min(100, state.stats.happiness + 1);
+  }
+  // Chance of discovering a new shell while cleaning!
+  const nextShell = SHELL_TIERS.find(t => t.minTrust <= state.stats.trust && t.tier > state.shell.tier);
+  if (nextShell && !state.pendingShell && Math.random() < 0.3) {
+    spawnShellWashUp(nextShell);
+  }
+  // Chance of finding a beach collectible while cleaning!
+  const found = trySpawnCollectible();
+  if (found) {
+    const fx = Math.max(W * 0.1, Math.min(W * 0.85, crabX + (Math.random() - 0.5) * 40));
+    const fy = Math.max(H * 0.38, Math.min(H * 0.60, crabY + (Math.random() - 0.5) * 20));
+    state.beach.lastFind = { item: found, time: state.time, x: fx, y: fy };
+    SFX.find();
+    // Also spawn a visible collectible on the beach
+    if (!state.beach.collectibles) state.beach.collectibles = [];
+    state.beach.collectibles.push({ id: found.id, x: fx, y: fy, spawnTime: state.time });
+    // Keep only last 5 visible on the beach (oldest fade away)
+    if (state.beach.collectibles.length > 5) state.beach.collectibles.shift();
+  } else {
+    state.beach.lastFind = null;
+  }
+  crabTargetX = W * 0.3 + Math.random() * W * 0.2;
+  crabTargetY = H * 0.52;
+  updateUI();
+}
+
+function spawnShellWashUp(shellData) {
+  state.pendingShell = {
+    ...shellData,
+    x: W * 0.5,
+    y: H * 0.25, // starts at water surface
+    targetY: H * 0.38 + Math.random() * H * 0.08, // settles on sand, visible above bottom UI
+    bobPhase: 0,
+    settled: false,
+    assessable: false
+  };
+}
+
+
+function startShellAssessment() {
+  if (!state.pendingShell || !state.pendingShell.settled) return;
+  SFX.assess();
+  const ps = state.pendingShell;
+  state.shell.upgrading = true;
+  state.shell.upgradeProgress = 0;
+  state.shell.nextShell = { name: SHELL_TIERS[ps.tier].name, tier: ps.tier, type: SHELL_TIERS[ps.tier].type };
+  state.pendingShell = null; // Remove from beach
+}
+
+function spawnVacancyChain(shellTier) {
+  // The Vacancy Dance: old shell drifts away with sparkles
+  // One crab, two shells - the old one goes, the new one stays
+  const driftDir = Math.random() > 0.5 ? 1 : -1;
+  const startX = crabX + driftDir * 20;
+  const targetX = driftDir > 0 ? W + 60 : -60;
+  
+  state.vacancyShells.push({
+    tier: shellTier,
+    x: startX,
+    y: crabY - 10,
+    targetX: targetX,
+    targetY: crabY - 10,
+    phase: 'drifting',
+    bobPhase: 0,
+    sparkles: []
+  });
+  
+  state.vacancyChainActive = true;
+  state.vacancyChainTimer = 0;
+}
+
+function toggleCollection() {
+  state.showCollection = !state.showCollection;
+  if (state.showCollection) {
+    state.shellButtons = [];
+    state.assessButton = null;
+  }
+}
+
+function toggleBeachCollection() {
+  state.showBeachCollection = !state.showBeachCollection;
+  if (state.showBeachCollection) {
+    state.showCollection = false; // Close shell modal if open
+  }
+}
+
+function inspectShell() {
+  if (state.care.trust < 20) {
+    // Crab hides — not enough trust yet
+    return;
+  }
+  isInspecting = true;
+  inspectProgress = 0;
+}
+
+function updateStreakDots() {
+  const dots = document.getElementById('streak-dots');
+  const consistent = state.care.streak;
+  let str = '';
+  for (let i = 0; i < 7; i++) {
+    str += i < consistent ? '●' : '○';
+  }
+  dots.textContent = str;
+  
+  // Check for anemone unlock
+  // Anemone appears when trust reaches Trusting level (50+)
+  if (state.stats.trust >= 50 && !state.anemone) {
+    state.anemone = { name: 'P. tsukisome', attached: true, glow: 0 };
+  }
+}
+
+function updateUI() {
+  document.getElementById('hunger-val').textContent = Math.round(state.stats.hunger);
+  document.getElementById('happy-val').textContent = Math.round(state.stats.happiness);
+  document.getElementById('health-val').textContent = Math.round(state.stats.health);
+  document.getElementById('trust-val').textContent = Math.round(state.stats.trust);
+  document.getElementById('beach-val').textContent = Math.round(state.beach.cleanliness);
+  document.getElementById('finds-val').textContent = (state.beach.foundItems ? state.beach.foundItems.length : 0);
+  
+  document.getElementById('hunger-bar').style.width = state.stats.hunger + '%';
+  document.getElementById('happy-bar').style.width = state.stats.happiness + '%';
+  document.getElementById('health-bar').style.width = state.stats.health + '%';
+  document.getElementById('trust-bar').style.width = state.stats.trust + '%';
+  document.getElementById('beach-bar').style.width = state.beach.cleanliness + '%';
+  
+  const tier = getDepthTier();
+  document.getElementById('depth-label').textContent = DEPTH_TIERS[tier].label;
+  document.getElementById('care-level').textContent = DEPTH_TIERS[tier].description;
+  
+  // Trust level labels
+  const trustLabels = [
+    [0, 'Wary'], [15, 'Curious'], [30, 'Friendly'],
+    [50, 'Trusting'], [70, 'Bonded'], [90, 'Family']
+  ];
+  const trustLabel = trustLabels.reverse().find(([threshold]) => state.stats.trust >= threshold)[1];
+  document.getElementById('trust-level').textContent = `Trust: ${trustLabel}`;
+  
+  // Pet button cooldown visual
+  const petBtn = document.getElementById('pet-btn');
+  if (petBtn) {
+    if (petCooldown > 0) {
+      const progress = ((PET_COOLDOWN_MAX - petCooldown) / PET_COOLDOWN_MAX) * 100;
+      petBtn.style.background = `linear-gradient(to right, rgba(100,200,255,0.25) ${progress}%, rgba(0,0,0,0) ${progress}%)`;
+      petBtn.style.opacity = '0.6';
+    } else {
+      petBtn.style.background = '';
+      petBtn.style.opacity = '1';
+    }
+  }
+  
+  document.getElementById('shell-name').textContent =  
+    state.shell.tier === 0 ? '🧴 Soda Bottle Cap' : 
+    state.shell.tier === 1 ? '🐚 Found Shell' : 
+    state.shell.tier === 2 ? '🌸 Rose Spike' : 
+    state.shell.tier === 3 ? '🔷 Blue Racer' : 
+    state.shell.tier === 4 ? '🟤 Spotted Helmet' : 
+    state.shell.tier === 5 ? '🔮 Purple Cone' : '🪸 Carcinoecium';
+    state.shell.tier === 2 ? '🐚 Decorated Shell' : 
+    state.shell.tier === 3 ? '🐚 Reinforced Shell' : '🪸 Carcinoecium';
+  
+  document.body.className = `tier-${tier}`;
+}
+
+// ---- OVERGROWTH (drawn on top of everything) ----
+function drawOvergrowth() {
+  if (state.beach.overgrowth.length === 0) return;
+  state.beach.overgrowth.forEach((patch, i) => {
+    const px = patch.x;
+    const py = patch.y;
+    const size = patch.size;
+    const age = state.time - patch.spawnTime;
+    
+    // Algae — dark mossy organic patches, NOT bright green
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(patch.angle);
+    
+    // Soft irregular shadow underneath
+    ctx.beginPath();
+    ctx.ellipse(0, 2, size * 1.2, size * 0.8, 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(40, 60, 30, 0.25)';
+    ctx.fill();
+    
+    // Main mossy blob — dark olive, not bright green
+    for (let j = 0; j < 3; j++) {
+      const ox = Math.sin(j * 2.5 + i) * size * 0.3;
+      const oy = Math.cos(j * 3.1 + i) * size * 0.2;
+      ctx.beginPath();
+      ctx.ellipse(ox, oy, size * (0.5 + j * 0.1), size * (0.35 + j * 0.08), j * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(50, 80, 35, 0.65)';
+      ctx.fill();
+    }
+    
+    // Texture dots — mossy speckles
+    for (let j = 0; j < 5; j++) {
+      const dx = Math.sin(j * 1.7 + i * 0.5) * size * 0.5;
+      const dy = Math.cos(j * 2.3 + i * 0.3) * size * 0.3;
+      ctx.beginPath();
+      ctx.arc(dx, dy, 1 + Math.random(), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(35, 60, 25, 0.8)';
+      ctx.fill();
+    }
+    
+    // Slightly lighter edge highlight
+    ctx.beginPath();
+    ctx.ellipse(size * 0.15, -size * 0.1, size * 0.3, size * 0.2, 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(70, 100, 50, 0.3)';
+    ctx.fill();
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ---- WASHED-UP SHELL ----
+function drawPendingShell() {
+  if (!state.pendingShell) return;
+  const ps = state.pendingShell;
+  
+  // Shell drifts down from water surface
+  if (!ps.settled) {
+    ps.y += (ps.targetY - ps.y) * 0.02;
+    ps.bobPhase += 0.05;
+    const bob = Math.sin(ps.bobPhase) * 3;
+    
+    // Draw shell floating down
+    ctx.save();
+    ctx.translate(ps.x, ps.y + bob);
+    
+    // Sparkle effect as it arrives
+    const sparkle = Math.sin(state.time * 0.1) * 0.3 + 0.7;
+    ctx.globalAlpha = sparkle;
+    
+    // Draw using the proper spiral shell functions!
+    drawShellPreview(0, 0, ps.tier, 1.2);
+    ctx.globalAlpha = 1;
+    
+    // "New!" indicator
+    ctx.fillStyle = '#FFD700';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    const pulse = 0.6 + Math.sin(state.time * 0.08) * 0.4;
+    ctx.globalAlpha = pulse;
+    ctx.fillText('New Shell!', 0, -45);
+    ctx.globalAlpha = 1;
+    
+    // Check if settled
+    if (Math.abs(ps.y - ps.targetY) < 2) {
+      ps.settled = true;
+      ps.y = ps.targetY;
+    }
+    
+    // Sparkle trail
+    for (let i = 0; i < 4; i++) {
+      const sx = Math.sin(state.time * 0.05 + i * 1.5) * 15;
+      const sy = -20 - i * 12 - Math.sin(state.time * 0.03 + i) * 5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 215, 0, ' + (0.8 - i * 0.2) + ')';
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  } else {
+    // Shell settled on beach — draw it sitting on the sand
+    ctx.save();
+    ctx.translate(ps.x, ps.y);
+    
+    // Draw the spiral shell
+    drawShellPreview(0, 0, ps.tier, 1.0);
+    
+    // Glow to indicate it's interactive
+    const glowPulse = 0.3 + Math.sin(state.time * 0.06) * 0.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 215, 0, ' + glowPulse + ')';
+    ctx.fill();
+    
+    // "Assess?" indicator
+    ctx.fillStyle = '#FFD700';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Tap to assess!', 0, -50);
+    
+    ctx.restore();
+  }
+}
+
+// ---- SHELL COLLECTION MODAL ----
+// Helper: rounded rect for browsers without ctx.roundRect
+function roundedRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function drawBeachCollectionModal() {
+  if (!state.showBeachCollection) return;
+  const foundItems = state.beach.foundItems || [];
+  
+  // Dim background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Modal box — BIG and readable
+  const cx = W / 2;
+  const boxW = W * 0.88;
+  const boxH = H * 0.75;
+  const boxTop = H * 0.12;
+  const boxLeft = cx - boxW / 2;
+  
+  // Box background
+  ctx.fillStyle = 'rgba(18, 30, 48, 0.95)';
+  ctx.beginPath();
+  ctx.moveTo(boxLeft + 16, boxTop);
+  ctx.lineTo(boxLeft + boxW - 16, boxTop);
+  ctx.arcTo(boxLeft + boxW, boxTop, boxLeft + boxW, boxTop + 16, 16);
+  ctx.lineTo(boxLeft + boxW, boxTop + boxH - 16);
+  ctx.arcTo(boxLeft + boxW, boxTop + boxH, boxLeft + boxW - 16, boxTop + boxH, 16);
+  ctx.lineTo(boxLeft + 16, boxTop + boxH);
+  ctx.arcTo(boxLeft, boxTop + boxH, boxLeft, boxTop + boxH - 16, 16);
+  ctx.lineTo(boxLeft, boxTop + 16);
+  ctx.arcTo(boxLeft, boxTop, boxLeft + 16, boxTop, 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(100, 180, 255, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Title
+  ctx.fillStyle = '#e0e8ef';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Beach Finds', cx, boxTop + 40);
+  
+  // Close hint
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = 'rgba(150, 180, 220, 0.5)';
+  ctx.fillText('tap anywhere to close', cx, boxTop + boxH - 16);
+  
+  if (foundItems.length === 0) {
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = 'rgba(180, 200, 220, 0.6)';
+    ctx.fillText('No finds yet... dig in the sand!', cx, boxTop + boxH * 0.45);
+    return;
+  }
+  
+  // Rarity colors
+  const rarityColors = { common: '#88aa88', uncommon: '#4da6ff', rare: '#ff4dff', legendary: '#ffaa00' };
+  const rarityIcons = { common: '\u25CB', uncommon: '\u25C6', rare: '\u2605', legendary: '\u2726' };
+  
+  // Draw items in a grid — 2 columns, bigger cards
+  const cols = 2;
+  const cardW = boxW / cols - 20;
+  const cardH = 90;
+  const startY = boxTop + 60;
+  const colGap = 20;
+  
+  foundItems.forEach((fi, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const ix = boxLeft + 20 + col * (cardW + colGap);
+    const iy = startY + row * (cardH + 10);
+    
+    if (iy + cardH > boxTop + boxH - 30) return; // Don't draw past modal
+    
+    // Card background
+    const cardAlpha = fi.rarity === 'legendary' ? 0.25 : fi.rarity === 'rare' ? 0.18 : fi.rarity === 'uncommon' ? 0.12 : 0.06;
+    ctx.fillStyle = `rgba(100, 180, 255, ${cardAlpha})`;
+    ctx.beginPath();
+    ctx.moveTo(ix + 8, iy);
+    ctx.lineTo(ix + cardW - 8, iy);
+    ctx.arcTo(ix + cardW, iy, ix + cardW, iy + 8, 8);
+    ctx.lineTo(ix + cardW, iy + cardH - 8);
+    ctx.arcTo(ix + cardW, iy + cardH, ix + cardW - 8, iy + cardH, 8);
+    ctx.lineTo(ix + 8, iy + cardH);
+    ctx.arcTo(ix, iy + cardH, ix, iy + cardH - 8, 8);
+    ctx.lineTo(ix, iy + 8);
+    ctx.arcTo(ix, iy, ix + 8, iy, 8);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Rarity border on card
+    ctx.strokeStyle = rarityColors[fi.rarity] || '#aaa';
+    ctx.lineWidth = fi.rarity === 'legendary' || fi.rarity === 'rare' ? 2 : 1;
+    ctx.stroke();
+    
+    // Rarity icon — big
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = rarityColors[fi.rarity];
+    ctx.textAlign = 'left';
+    ctx.fillText(rarityIcons[fi.rarity], ix + 12, iy + 35);
+    
+    // Item name — big and readable
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#e0e8ef';
+    ctx.textAlign = 'left';
+    ctx.fillText(fi.name, ix + 44, iy + 30);
+    
+    // Rarity label
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = rarityColors[fi.rarity];
+    ctx.fillText(fi.rarity.toUpperCase(), ix + 44, iy + 48);
+    
+    // Count
+    if (fi.count > 1) {
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText('x' + fi.count, ix + cardW - 10, iy + 30);
+      ctx.textAlign = 'left';
+    }
+  });
+}
+
+function drawCollectionModal() {
+  if (!state.showCollection) return;
+  
+  // Dim background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // SHELL-SHAPED modal background
+  const cx = W / 2;
+  const modalTop = H * 0.06;
+  const modalBottom = H * 0.90;
+  const modalHeight = modalBottom - modalTop;
+  const maxW = W * 0.82;
+  
+  // Draw shell shape: pronounced spiral shell silhouette
+  ctx.beginPath();
+  // Bottom opening (wide)
+  ctx.moveTo(cx - maxW * 0.5, modalBottom);
+  // Right side curves up with a slight bulge for the body whorl
+  ctx.bezierCurveTo(cx + maxW * 0.55, modalBottom, cx + maxW * 0.48, modalBottom - modalHeight * 0.25, cx + maxW * 0.35, modalTop + modalHeight * 0.45);
+  // Right shoulder narrows to spire
+  ctx.bezierCurveTo(cx + maxW * 0.22, modalTop + modalHeight * 0.2, cx + maxW * 0.1, modalTop + modalHeight * 0.05, cx, modalTop + 15);
+  // Spire tip
+  ctx.bezierCurveTo(cx - maxW * 0.1, modalTop + modalHeight * 0.05, cx - maxW * 0.22, modalTop + modalHeight * 0.2, cx - maxW * 0.35, modalTop + modalHeight * 0.45);
+  // Left side curves down
+  ctx.bezierCurveTo(cx - maxW * 0.48, modalBottom - modalHeight * 0.25, cx - maxW * 0.55, modalBottom, cx - maxW * 0.5, modalBottom);
+  ctx.closePath();
+  
+  // Shell gradient
+  const shellGrad = ctx.createLinearGradient(cx, modalTop, cx, modalBottom);
+  const currentTier = state.shell.tier;
+  const baseColor = currentTier === 0 ? '#8a8a8a' : currentTier === 1 ? '#a0906a' : currentTier === 2 ? '#b8a880' : currentTier === 3 ? '#7a6a5a' : '#5a7a6a';
+  shellGrad.addColorStop(0, baseColor);
+  shellGrad.addColorStop(0.6, 'rgba(20, 30, 50, 0.95)');
+  shellGrad.addColorStop(1, 'rgba(15, 25, 40, 0.98)');
+  ctx.fillStyle = shellGrad;
+  ctx.fill();
+  
+  // Nacre-like inner glow
+  const nacreGrad = ctx.createRadialGradient(cx, modalBottom - modalHeight * 0.3, 10, cx, modalBottom - modalHeight * 0.3, maxW * 0.5);
+  nacreGrad.addColorStop(0, 'rgba(200, 180, 220, 0.08)');
+  nacreGrad.addColorStop(0.5, 'rgba(150, 200, 220, 0.04)');
+  nacreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = nacreGrad;
+  ctx.fill();
+  
+  // Shell rim highlight
+  ctx.strokeStyle = 'rgba(150, 200, 255, 0.25)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Spiral ridge lines
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    const ridgeOffset = 15 + i * 12;
+    ctx.moveTo(cx - maxW/2 + ridgeOffset, modalBottom - 5);
+    ctx.bezierCurveTo(cx - maxW/2 + ridgeOffset + 10, modalBottom - modalHeight * 0.2, cx - maxW * 0.3 + i * 5, modalTop + modalHeight * 0.4, cx - 10 + i * 8, modalTop + 30 + i * 15);
+    ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.05 - i * 0.015) + ')';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  
+  // Title BIGGER - at the very top
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Shell Collection', cx, modalTop + 30);
+  
+  // Current shell section header - well above the shell preview
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText('YOUR HOME', cx, modalTop + 55);
+  
+  // Draw current shell (BIG) - moved down to not eclipse title
+  const currentShell = SHELL_TIERS[state.shell.tier];
+  const shellCenterX = cx;
+  const shellCenterY = modalTop + 160;
+  drawShellPreview(shellCenterX, shellCenterY, state.shell.tier, 0.8);
+  
+  // Current shell name BIGGER
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillStyle = '#FFF';
+  ctx.fillText(currentShell.name, cx, shellCenterY + 85);
+  
+  // Current shell description BIGGER
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText(currentShell.desc, cx, shellCenterY + 101);
+  
+  // Separator
+  ctx.beginPath();
+  ctx.moveTo(cx - maxW * 0.35, modalTop + 255);
+  ctx.lineTo(cx + maxW * 0.35, modalTop + 255);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // Discover more header
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText('DISCOVER MORE', cx, modalTop + 280);
+  
+  // Shell unlock row - show ALL 7 tiers (0-6)
+  const shellStartX = cx - maxW * 0.42;
+  const shellSpacing = (maxW * 0.84) / 7;
+  const shellY = modalTop + 370;
+  
+  for (let i = 0; i < 7; i++) {
+    const sx = shellStartX + i * shellSpacing + shellSpacing/2;
+    const tier = SHELL_TIERS[i];
+    const unlocked = i <= state.shell.tier;
+    const isNext = i === state.shell.tier + 1 && state.stats.trust >= tier.minTrust;
+    
+    if (!state.shellButtons) state.shellButtons = [];
+    state.shellButtons[i] = { x: sx, y: shellY, w: shellSpacing * 0.85, h: 80, tier: i, isNext, unlocked };
+    
+    if (unlocked) {
+      drawShellPreview(sx, shellY, i, 0.5);
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#FFD700';
+      ctx.textAlign = 'center';
+      ctx.fillText(tier.name, sx, shellY + 55);
+    } else {
+      ctx.globalAlpha = 0.3;
+      drawShellPreview(sx, shellY, i, 0.5);
+      ctx.globalAlpha = 1;
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
+      if (isNext) {
+        ctx.fillStyle = '#1abc9c';
+        ctx.fillText('OPEN', sx, shellY + 55);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#1abc9c';
+        ctx.fillText('Trust ' + tier.minTrust + '+', sx, shellY + 70);
+      } else {
+        ctx.font = '9px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillText('LOCKED', sx, shellY + 55);
+        ctx.font = '8px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillText('Trust ' + tier.minTrust, sx, shellY + 68);
+      }
+    }
+  }
+  
+  // Assess button BIGGER
+  if (state.pendingShell && state.pendingShell.settled) {
+    const btnW = 200, btnH = 50;
+    const btnX = cx - btnW/2;
+    const btnY = modalBottom - 80;
+    state.assessButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+    ctx.beginPath();
+    roundedRect(btnX, btnY, btnW, btnH, 14);
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText('Assess New Shell!', cx, btnY + 32);
+  } else {
+    state.assessButton = null;
+  }
+  
+  // Close hint BIGGER
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('Tap Shells button to close', cx, modalBottom - 12);
+  ctx.textAlign = 'left';
+}
+
+
+
+// Shell drawing functions converted from Erinem's Figma SVGs
+// Each function draws a proper spiral shell on a canvas context
+
+function drawBottleCap(ctx, scale) {
+  // Tier 0 - still a flat bottle cap
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 50, 38, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#B0B0B0';
+  ctx.fill();
+  ctx.strokeStyle = '#808080';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Crinkled edge
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const rx = 52 + Math.sin(i * 3) * 3;
+    const ry = 40 + Math.sin(i * 3) * 3;
+    ctx.beginPath();
+    ctx.arc(Math.cos(angle) * rx, Math.sin(angle) * ry, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#909090';
+    ctx.fill();
+  }
+  // Text
+  ctx.fillStyle = '#606060';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('COLA', 0, 3);
+  // Dent
+  ctx.beginPath();
+  ctx.ellipse(10, -8, 8, 5, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.fill();
+}
+
+function drawAmberConch(ctx, scale) {
+  // Tier 1 - Shell 1 from SVG: amber spiral conch
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.rotate(0.26); // 15 degrees like original
+  
+  // Gradient
+  const grad = ctx.createLinearGradient(-100, -100, 100, 100);
+  grad.addColorStop(0, '#f59e0b');
+  grad.addColorStop(0.5, '#d97706');
+  grad.addColorStop(1, '#92400e');
+  
+  // Spiral whorls - body whorl (biggest)
+  ctx.beginPath();
+  ctx.moveTo(120, 40);
+  ctx.bezierCurveTo(140, 40, 150, 60, 140, 80);
+  ctx.bezierCurveTo(110, 70, 70, 70, 50, 80);
+  ctx.bezierCurveTo(40, 60, 60, 40, 80, 40);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Second whorl
+  ctx.beginPath();
+  ctx.moveTo(140, 80);
+  ctx.bezierCurveTo(160, 80, 170, 110, 160, 130);
+  ctx.bezierCurveTo(120, 120, 70, 120, 40, 130);
+  ctx.bezierCurveTo(30, 110, 20, 80, 50, 80);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Body whorl (bottom/biggest)
+  ctx.beginPath();
+  ctx.moveTo(160, 130);
+  ctx.bezierCurveTo(170, 150, 150, 180, 100, 190);
+  ctx.bezierCurveTo(70, 190, 30, 160, 40, 130);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Spire tip
+  ctx.beginPath();
+  ctx.moveTo(100, 15);
+  ctx.bezierCurveTo(110, 15, 115, 25, 110, 40);
+  ctx.lineTo(90, 40);
+  ctx.bezierCurveTo(85, 25, 90, 15, 100, 15);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Spire top
+  ctx.beginPath();
+  ctx.moveTo(100, 5);
+  ctx.bezierCurveTo(105, 5, 105, 10, 105, 15);
+  ctx.lineTo(95, 15);
+  ctx.bezierCurveTo(95, 10, 95, 5, 100, 5);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Aperture (opening)
+  ctx.beginPath();
+  ctx.moveTo(60, 140);
+  ctx.bezierCurveTo(80, 135, 100, 145, 110, 170);
+  ctx.bezierCurveTo(90, 185, 60, 180, 50, 160);
+  ctx.bezierCurveTo(45, 150, 50, 145, 60, 140);
+  ctx.closePath();
+  ctx.fillStyle = '#451a03';
+  ctx.fill();
+  ctx.strokeStyle = '#fcd34d';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Ridges
+  ctx.beginPath();
+  ctx.moveTo(60, 80);
+  ctx.bezierCurveTo(80, 90, 120, 90, 130, 80);
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(50, 130);
+  ctx.bezierCurveTo(80, 140, 130, 140, 150, 130);
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(55, 105);
+  ctx.bezierCurveTo(80, 115, 120, 115, 145, 105);
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  
+  ctx.restore();
+}
+
+function drawPinkMoonSnail(ctx, scale) {
+  // Tier 2 - Shell 2 from SVG: pink moon snail with spines
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.translate(10, 10);
+  
+  // Base gradient
+  const baseGrad = ctx.createLinearGradient(20, 0, 160, 200);
+  baseGrad.addColorStop(0, '#fdf2f8');
+  baseGrad.addColorStop(0.4, '#f472b6');
+  baseGrad.addColorStop(1, '#be185d');
+  
+  // Main shell body
+  ctx.beginPath();
+  ctx.moveTo(100, 20);
+  ctx.bezierCurveTo(160, 50, 180, 120, 140, 160);
+  ctx.bezierCurveTo(100, 180, 60, 160, 40, 120);
+  ctx.bezierCurveTo(20, 80, 60, 40, 100, 20);
+  ctx.closePath();
+  ctx.fillStyle = baseGrad;
+  ctx.fill();
+  
+  // Spines
+  const spineColor = '#f472b6';
+  const spineStroke = '#be185d';
+  const spines = [
+    { points: [150,60, 180,40, 160,75] },
+    { points: [165,95, 195,90, 165,110] },
+    { points: [155,130, 180,150, 145,145] },
+    { points: [115,165, 125,190, 100,170] },
+    { points: [60,155, 40,180, 70,145] },
+    { points: [30,110, 5,115, 35,95] },
+    { points: [40,65, 15,45, 50,55] },
+    { points: [75,30, 60,5, 90,25] }
+  ];
+  spines.forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(s.points[0], s.points[1]);
+    ctx.lineTo(s.points[2], s.points[3]);
+    ctx.lineTo(s.points[4], s.points[5]);
+    ctx.closePath();
+    ctx.fillStyle = spineColor;
+    ctx.fill();
+    ctx.strokeStyle = spineStroke;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+  
+  // Spiral growth lines
+  ctx.beginPath();
+  ctx.moveTo(100, 20);
+  ctx.bezierCurveTo(110, 50, 90, 80, 50, 100);
+  ctx.strokeStyle = '#831843';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.4;
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(130, 50);
+  ctx.bezierCurveTo(130, 80, 110, 110, 70, 130);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(150, 90);
+  ctx.bezierCurveTo(140, 120, 120, 140, 90, 160);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  
+  // Aperture with lip
+  const lipGrad = ctx.createLinearGradient(0, 0, 200, 0);
+  lipGrad.addColorStop(0, '#f9a8d4');
+  lipGrad.addColorStop(1, '#fda4af');
+  
+  ctx.beginPath();
+  ctx.moveTo(80, 90);
+  ctx.bezierCurveTo(120, 70, 140, 90, 130, 140);
+  ctx.bezierCurveTo(120, 160, 90, 170, 70, 150);
+  ctx.bezierCurveTo(60, 140, 70, 110, 80, 90);
+  ctx.closePath();
+  ctx.fillStyle = lipGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#fff1f2';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Dark interior
+  ctx.beginPath();
+  ctx.moveTo(85, 100);
+  ctx.bezierCurveTo(110, 90, 120, 105, 115, 130);
+  ctx.bezierCurveTo(110, 145, 95, 150, 80, 140);
+  ctx.bezierCurveTo(75, 130, 75, 115, 85, 100);
+  ctx.closePath();
+  ctx.fillStyle = '#4c0519';
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+function drawGoldenTurbano(ctx, scale) {
+  // Tier 3 - Shell 5 from SVG: golden spotted shell
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.rotate(-0.26); // -15 degrees
+  
+  // Radial gradient
+  const bgGrad = ctx.createRadialGradient(80, 80, 10, 100, 100, 130);
+  bgGrad.addColorStop(0, '#fef08a');
+  bgGrad.addColorStop(0.7, '#eab308');
+  bgGrad.addColorStop(1, '#854d0e');
+  
+  // Main shell body
+  ctx.beginPath();
+  ctx.moveTo(100, 30);
+  ctx.bezierCurveTo(160, 30, 180, 90, 160, 140);
+  ctx.bezierCurveTo(130, 190, 70, 180, 40, 140);
+  ctx.bezierCurveTo(10, 100, 40, 30, 100, 30);
+  ctx.closePath();
+  ctx.fillStyle = bgGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#713f12';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Spots pattern
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 6; col++) {
+      const sx = 40 + col * 28 + (row % 2) * 14;
+      const sy = 40 + row * 28;
+      const dist = Math.sqrt((sx - 100) * (sx - 100) + (sy - 100) * (sy - 100));
+      if (dist < 85) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5 + Math.sin(col + row) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(127, 29, 29, 0.85)';
+        ctx.fill();
+      }
+    }
+  }
+  
+  // Growth ridges
+  ctx.beginPath();
+  ctx.moveTo(40, 140);
+  ctx.bezierCurveTo(60, 100, 100, 80, 150, 90);
+  ctx.strokeStyle = '#713f12';
+  ctx.lineWidth = 4;
+  ctx.globalAlpha = 0.5;
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(60, 160);
+  ctx.bezierCurveTo(80, 130, 120, 120, 160, 125);
+  ctx.strokeStyle = '#713f12';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  
+  // Highlight
+  ctx.beginPath();
+  ctx.moveTo(100, 35);
+  ctx.bezierCurveTo(140, 35, 165, 75, 155, 110);
+  ctx.bezierCurveTo(145, 70, 110, 45, 75, 55);
+  ctx.bezierCurveTo(60, 60, 50, 70, 45, 80);
+  ctx.bezierCurveTo(45, 60, 65, 35, 100, 35);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fill();
+  
+  // Aperture
+  ctx.beginPath();
+  ctx.moveTo(70, 120);
+  ctx.bezierCurveTo(110, 110, 130, 140, 110, 170);
+  ctx.bezierCurveTo(90, 190, 60, 160, 70, 120);
+  ctx.closePath();
+  ctx.fillStyle = '#fef9c3';
+  ctx.fill();
+  ctx.strokeStyle = '#a16207';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Dark interior
+  ctx.beginPath();
+  ctx.moveTo(75, 130);
+  ctx.bezierCurveTo(100, 125, 115, 145, 105, 165);
+  ctx.bezierCurveTo(90, 180, 70, 155, 75, 130);
+  ctx.closePath();
+  ctx.fillStyle = '#450a0a';
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+function drawTealNautilus(ctx, scale) {
+  // Tier 4 - Shell 6 from SVG: teal nautilus with gold spirals
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.translate(10, 10);
+  
+  // Teal gradient
+  const grad = ctx.createLinearGradient(0, 0, 200, 200);
+  grad.addColorStop(0, '#2dd4bf');
+  grad.addColorStop(0.5, '#0ea5e9');
+  grad.addColorStop(1, '#312e81');
+  
+  // Gold gradient for strokes
+  const goldGrad = ctx.createLinearGradient(0, 200, 200, 0);
+  goldGrad.addColorStop(0, '#fbbf24');
+  goldGrad.addColorStop(0.5, '#fef3c7');
+  goldGrad.addColorStop(1, '#d97706');
+  
+  // Main spiral body
+  ctx.beginPath();
+  ctx.moveTo(100, 20);
+  ctx.bezierCurveTo(160, 20, 180, 80, 160, 130);
+  ctx.bezierCurveTo(140, 180, 80, 180, 40, 140);
+  ctx.bezierCurveTo(0, 100, 20, 40, 70, 20);
+  ctx.bezierCurveTo(100, 10, 140, 20, 160, 60);
+  ctx.bezierCurveTo(180, 100, 160, 140, 120, 150);
+  ctx.bezierCurveTo(90, 160, 60, 140, 60, 110);
+  ctx.bezierCurveTo(60, 80, 90, 60, 120, 70);
+  ctx.bezierCurveTo(140, 80, 140, 110, 120, 120);
+  ctx.bezierCurveTo(110, 125, 100, 120, 100, 110);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = goldGrad;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  
+  // Gold spiral arms
+  const arms = [
+    [100,20, 110,40, 100,60, 70,20],
+    [145,35, 130,60, 110,70, 95,35],
+    [175,80, 140,90, 120,90, 130,50],
+    [165,125, 130,115, 120,100, 150,85],
+    [135,160, 110,140, 105,120, 135,115],
+    [85,170, 80,140, 90,125, 115,135],
+    [35,135, 50,115, 70,110, 85,140],
+    [20,80, 50,85, 65,100, 50,125]
+  ];
+  arms.forEach(a => {
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.bezierCurveTo(a[2], a[3], a[4], a[5], a[6], a[7]);
+    ctx.strokeStyle = goldGrad;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+  
+  // Highlight
+  ctx.beginPath();
+  ctx.moveTo(100, 25);
+  ctx.bezierCurveTo(140, 25, 165, 70, 150, 115);
+  ctx.bezierCurveTo(145, 80, 120, 50, 80, 40);
+  ctx.bezierCurveTo(60, 35, 40, 40, 25, 55);
+  ctx.bezierCurveTo(35, 35, 65, 25, 100, 25);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fill();
+  
+  // Aperture - deep dark
+  ctx.beginPath();
+  ctx.moveTo(60, 110);
+  ctx.bezierCurveTo(40, 140, 80, 175, 110, 150);
+  ctx.bezierCurveTo(90, 170, 50, 150, 60, 110);
+  ctx.closePath();
+  ctx.fillStyle = '#0f172a';
+  ctx.fill();
+  
+  // Bioluminescent glow (for deep-sea tier)
+  const glowGrad = ctx.createRadialGradient(80, 120, 5, 80, 120, 30);
+  glowGrad.addColorStop(0, 'rgba(45, 212, 191, 0.6)');
+  glowGrad.addColorStop(0.5, 'rgba(14, 165, 233, 0.2)');
+  glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.arc(80, 120, 30, 0, Math.PI * 2);
+  ctx.fillStyle = glowGrad;
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+// Updated drawShellPreview using the new spiral shells
+function drawShellPreview(x, y, tier, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  
+  // Try shell image first (now ALL tiers have empty shells in shellImages)
+  if (typeof shellImages !== 'undefined' && shellImages[tier] && shellImages[tier].complete) {
+    // Figma PNGs are 794x1123 (portrait). Scale based on height.
+    const imgH = shellImages[tier].naturalHeight || shellImages[tier].height || 1123;
+    const imgW = shellImages[tier].naturalWidth || shellImages[tier].width || 794;
+    const imgScale = scale * 200 / imgH;  // Scale to ~200px tall at scale=1
+    ctx.scale(imgScale, imgScale);
+    ctx.drawImage(shellImages[tier], -imgW/2, -imgH, imgW, imgH);
+    ctx.restore();
+    return;
+  }
+  
+  // Fallback: canvas drawing (also used for tier 0 to avoid ghost crab)
+  if (tier === 0) {
+    drawBottleCap(ctx, scale * 0.6);
+  } else {
+    drawAmberConch(ctx, scale * 0.45);
+  }
+  
+  ctx.restore();
+}
+
+function drawBgCrab(crab) {
+  ctx.save();
+  ctx.translate(crab.x, crab.y);
+  ctx.scale(crab.facing * crab.size, crab.size);
+  
+  const walkBob = Math.sin(crab.walkFrame * 0.12) * 1;
+  
+  // Tiny shell — use canvas drawing for all bg crabs to avoid ghosting
+  // (PNGs for tiers 0/5/6 include the crab body, which causes double-crab)
+  if (crab.shellTier === 0) {
+    // Tier 0 bottle cap
+    drawBottleCap(ctx, 0.07);
+  } else if (crab.shellTier >= 0) {
+    // Tiers 1-6: colored ellipse fallback for bg crabs (cleaner than PNG with embedded crab)
+    const shellData = SHELL_TIERS[crab.shellTier];
+    ctx.beginPath();
+    ctx.ellipse(0, -3, 14, 10, 0, 0, Math.PI * 2);
+    ctx.fillStyle = shellData.color;
+    ctx.fill();
+    ctx.strokeStyle = shellData.accent;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else {
+    // No shell — vulnerable, soft body exposed
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 10, 8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(180, 120, 90, 0.4)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150, 100, 70, 0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+  
+  // Body
+  ctx.beginPath();
+  ctx.ellipse(0, 5, 7, 5 + walkBob, 0, 0, Math.PI * 2);
+  ctx.fillStyle = crab.color;
+  ctx.fill();
+  
+  // Legs (simplified)
+  ctx.strokeStyle = crab.color;
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const side = i < 2 ? -1 : 1;
+    const lx = side * (6 + i * 3);
+    const ly = 6 + i * 2;
+    const walkOffset = Math.sin(crab.walkFrame * 0.15 + i) * 2;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(lx + side * 8 + walkOffset, ly + 8);
+    ctx.stroke();
+  }
+  
+  // Eye stalks (tiny)
+  ctx.beginPath();
+  ctx.moveTo(-3, -2);
+  ctx.lineTo(-4, -9 + walkBob);
+  ctx.strokeStyle = 'rgba(180, 80, 50, 0.7)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-4, -10 + walkBob, 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+  
+  ctx.beginPath();
+  ctx.moveTo(3, -2);
+  ctx.lineTo(5, -8 + walkBob);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(5, -9 + walkBob, 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+  
+  // If this crab just received a shell, show sparkles
+  if (crab.phase === 'receiving' && crab.receivedShell) {
+    const sparkAlpha = 0.4 + Math.sin(state.time * 0.1) * 0.3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 215, 0, ${sparkAlpha * 0.15})`;
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+function drawVacancyShells() {
+  state.vacancyShells.forEach((vs, idx) => {
+    if (vs.phase === 'drifting') {
+      // Shell drifts from main crab position to the meeting point
+      vs.x += (vs.targetX - vs.x) * vs.driftSpeed;
+      vs.y += (vs.targetY - vs.y) * vs.driftSpeed;
+      vs.bobPhase += 0.04;
+      const bob = Math.sin(vs.bobPhase) * 2;
+      
+      // Draw the drifting shell
+      ctx.save();
+      ctx.translate(vs.x, vs.y + bob);
+      ctx.globalAlpha = 0.8;
+      drawShellPreview(0, 0, vs.tier, 1.0);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      
+      // Sparkle trail
+      vs.sparkles.push({
+        x: vs.x + (Math.random() - 0.5) * 10,
+        y: vs.y + (Math.random() - 0.5) * 10,
+        life: 1,
+        size: 1 + Math.random() * 2
+      });
+      
+      // Check if it reached target
+      if (Math.abs(vs.x - vs.targetX) < 5 && Math.abs(vs.y - vs.targetY) < 5) {
+        vs.phase = 'received';
+        // Give shell to first waiting bg crab
+        const receiver = state.bgCrabs.find(c => c.phase === 'approaching');
+        if (receiver) {
+          receiver.phase = 'receiving';
+          receiver.receivedShell = SHELL_TIERS[vs.tier];
+          receiver.shellTier = vs.tier;
+          receiver.departureTimer = 0;
+        }
+      }
+    }
+    
+    // Draw sparkle trail
+    vs.sparkles = vs.sparkles.filter(s => {
+      s.life -= 0.03;
+      if (s.life <= 0) return false;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 215, 0, ${s.life * 0.5})`;
+      ctx.fill();
+      return true;
+    });
+  });
+}
+
+function updateVacancyChain() {
+  if (!state.vacancyChainActive) return;
+  state.vacancyChainTimer++;
+  
+  // Just drift the old shell off screen with sparkles
+  state.vacancyShells.forEach(vs => {
+    if (vs.phase === 'drifting') {
+      const dx = vs.targetX - vs.x;
+      if (Math.abs(dx) > 3) {
+        vs.x += dx * 0.008; // Gentle drift
+        vs.bobPhase += 0.05;
+      } else {
+        vs.phase = 'gone';
+      }
+    }
+  });
+  
+  // Clean up gone shells
+  state.vacancyShells = state.vacancyShells.filter(vs => vs.phase !== 'gone');
+  
+  // End vacancy chain when shell has left OR after safety timeout
+  if (state.vacancyShells.length === 0 || state.vacancyChainTimer > 300) {
+    state.vacancyChainActive = false;
+    state.bgCrabs = [];
+    state.vacancyShells = [];
+  }
+}
+
+// ---- CELEBRATION BURST (golden sparkles on shell upgrade!) ----
+function drawCelebrationBurst(ctx) {
+  const cb = state.celebrationBurst;
+  cb.timer++;
+  if (cb.timer > cb.duration) {
+    state.celebrationBurst = null;
+    return;
+  }
+  const progress = cb.timer / cb.duration; // 0 → 1
+  const alpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Burst of golden stars/sparkles radiating outward
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + progress * 0.5;
+    const dist = progress * 60;
+    const sx = cb.x + Math.cos(angle) * dist;
+    const sy = cb.y + Math.sin(angle) * dist * 0.6; // Squished oval
+    const size = (1 - progress) * 5 + 1;
+    ctx.font = `${Math.floor(size * 2)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Alternate between stars and sparkles
+    ctx.fillText(i % 2 === 0 ? '✨' : '⭐', sx, sy);
+  }
+  // Central flash at the start
+  if (progress < 0.15) {
+    const flashAlpha = 1 - progress / 0.15;
+    ctx.beginPath();
+    ctx.arc(cb.x, cb.y, 40 * (1 - progress), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 230, 150, ${flashAlpha * 0.4})`;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---- FOUND ITEM POPUP ----
+function drawFoundItemPopup(ctx) {
+  if (!state.beach.lastFind) return;
+  const elapsed = state.time - state.beach.lastFind.time;
+  if (elapsed > 300) {
+    state.beach.lastFind = null;
+    return;
+  }
+  const item = state.beach.lastFind.item;
+    const alpha = elapsed < 250 ? 1 : 1 - (elapsed - 250) / 50; // Fade out last 50 frames
+  
+  const rarityColors = {
+    common: '#88aa88',
+    uncommon: '#4488cc',
+    rare: '#cc88ff',
+    legendary: '#ffaa22'
+  };
+  const rarityGlow = {
+    common: 'rgba(136, 170, 136, 0.3)',
+    uncommon: 'rgba(68, 136, 204, 0.3)',
+    rare: 'rgba(204, 136, 255, 0.3)',
+    legendary: 'rgba(255, 170, 34, 0.4)'
+  };
+  
+  const px = W / 2;
+  const py = H * 0.3;
+  const w = 260;
+  const h = 90;
+  
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  
+  // Glow for rare/legendary
+  if (item.rarity === 'rare' || item.rarity === 'legendary') {
+    // Sparkle particles
+    for (let i = 0; i < 12; i++) {
+      const sx = px + (Math.random() - 0.5) * w * 1.5;
+      const sy = py + (Math.random() - 0.5) * h * 2;
+      const ss = 2 + Math.random() * 3;
+      ctx.beginPath();
+      ctx.arc(sx, sy, ss, 0, Math.PI * 2);
+      ctx.fillStyle = rarityGlow[item.rarity];
+      ctx.fill();
+    }
+  }
+  
+  // Background pill (rounded rect)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.beginPath();
+  ctx.moveTo(px - w/2 + 10, py - h/2);
+  ctx.lineTo(px + w/2 - 10, py - h/2);
+  ctx.arcTo(px + w/2, py - h/2, px + w/2, py - h/2 + 10, 10);
+  ctx.lineTo(px + w/2, py + h/2 - 10);
+  ctx.arcTo(px + w/2, py + h/2, px + w/2 - 10, py + h/2, 10);
+  ctx.lineTo(px - w/2 + 10, py + h/2);
+  ctx.arcTo(px - w/2, py + h/2, px - w/2, py + h/2 - 10, 10);
+  ctx.lineTo(px - w/2, py - h/2 + 10);
+  ctx.arcTo(px - w/2, py - h/2, px - w/2 + 10, py - h/2, 10);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Rarity border
+  ctx.strokeStyle = rarityColors[item.rarity];
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px - w/2 + 10, py - h/2);
+  ctx.lineTo(px + w/2 - 10, py - h/2);
+  ctx.arcTo(px + w/2, py - h/2, px + w/2, py - h/2 + 10, 10);
+  ctx.lineTo(px + w/2, py + h/2 - 10);
+  ctx.arcTo(px + w/2, py + h/2, px + w/2 - 10, py + h/2, 10);
+  ctx.lineTo(px - w/2 + 10, py + h/2);
+  ctx.arcTo(px - w/2, py + h/2, px - w/2, py + h/2 - 10, 10);
+  ctx.lineTo(px - w/2, py - h/2 + 10);
+  ctx.arcTo(px - w/2, py - h/2, px - w/2 + 10, py - h/2, 10);
+  ctx.closePath();
+  ctx.stroke();
+  
+  // Item name
+  ctx.fillStyle = rarityColors[item.rarity];
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Found! ' + item.name, px, py - 8);
+  
+  // Rarity label
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = '#ccc';
+  ctx.fillText(item.rarity.toUpperCase(), px, py + 16);
+  
+  ctx.restore();
+}
+
+// ---- ANIMATION LOOP ----
+function animate() {
+  state.time++;
+  
+  // Pet cooldown countdown
+  if (petCooldown > 0) petCooldown--;
+  if (petAnimTimer > 0) petAnimTimer--;
+  
+  // Crab doesn't wander during shell assessment
+  if (!state.shell.upgrading && !isInspecting && !isDigging && Math.random() < 0.003) {
+    crabTargetX = W * 0.15 + Math.random() * W * 0.65;
+    crabTargetY = H * 0.40 + Math.random() * H * 0.12; // Stay on visible sand
+    // Clamp crab position to visible area
+    crabX = Math.max(W * 0.1, Math.min(W * 0.85, crabX));
+    crabY = Math.max(H * 0.30, Math.min(H * 0.60, crabY));
+  }
+  
+  // Move toward target (not during assessment; if digPending, stop when close and start digging)
+  if (!state.shell.upgrading && !isDigging) {
+    const dx = crabTargetX - crabX;
+    const dy = crabTargetY - crabY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 5) {
+      // Walk faster toward dig spot - scuttle scuttle!
+      const speed = state.digPending ? 0.08 : 0.005;
+      crabX += dx * speed;
+      crabY += dy * speed;
+      crabFacing = dx > 0 ? 1 : -1;
+      crabWalkFrame++;
+    } else if (state.digPending) {
+      // Arrived at dig spot — start digging!
+      state.digPending = false;
+      isDigging = true;
+      digTimer = 70;
+      digSpotX = crabX;
+      digSpotY = crabY;
+      SFX.dig();
+      // 15% chance of treasure!
+      if (Math.random() < 0.15) {
+        const item = trySpawnCollectible();
+        if (!state.beach.foundItems) state.beach.foundItems = [];
+        const existing = state.beach.foundItems.find(fi => fi.name === item.name);
+        if (existing) existing.count = (existing.count || 1) + 1;
+        else state.beach.foundItems.push({...item, count: 1});
+        // Also show it on the beach!
+        if (!state.beach.collectibles) state.beach.collectibles = [];
+        state.beach.collectibles.push({ id: item.id, x: crabX, y: crabY, spawnTime: state.time });
+        if (state.beach.collectibles.length > 5) state.beach.collectibles.shift();
+        state.beach.lastFind = { item, time: state.time, x: crabX, y: crabY };
+        state.stats.happiness = Math.min(100, state.stats.happiness + (item.rarity === 'legendary' ? 15 : item.rarity === 'rare' ? 8 : item.rarity === 'uncommon' ? 3 : 1));
+      }
+      state.stats.happiness = Math.min(100, state.stats.happiness + 2);
+    }
+  }
+  
+  // Digging animation — sand sprays sideways from under the crab (not puking!)
+  if (isDigging) {
+    digTimer--;
+    if (digTimer <= 0) {
+      isDigging = false;
+      // Leave a little dig hole right where the crab was digging!
+      state.beach.digMarks = state.beach.digMarks || [];
+      if (state.beach.digMarks.length < 5) {
+        state.beach.digMarks.push({ x: digSpotX, y: digSpotY, age: 0 });
+      }
+    } else {
+      // Spawn sand particles every 4 frames — spray sideways from under the crab
+      if (digTimer % 4 === 0) {
+        // Sand spray offset — from the leg/sand area, varies by shell tier
+        const yOffset = state.shell.tier === 0 ? 12 : state.shell.tier === 1 ? 10 : 8;
+        for (let i = 0; i < 4; i++) {
+          const sideDir = (i < 2 ? -1 : 1);
+          digParticles.push({
+            x: digSpotX + sideDir * (3 + Math.random() * 6),
+            y: digSpotY + yOffset + Math.random() * 3, // Just below body, legs/sand area
+            vx: sideDir * (1.5 + Math.random() * 2), // Spray sideways!
+            vy: 0.2 + Math.random() * 0.5, // Barely upward, mostly out
+            life: 14 + Math.random() * 6,
+            size: 1.5 + Math.random() * 2,
+            color: Math.random() > 0.4 ? '#c4a882' : '#b89860'
+          });
+        }
+        // Tiny upward spray
+        digParticles.push({
+          x: digSpotX + (Math.random() - 0.5) * 8,
+          y: digSpotY + yOffset - 2,
+          vx: (Math.random() - 0.5) * 2,
+          vy: -0.3 - Math.random() * 0.3, // Very subtle
+          life: 6 + Math.random() * 4,
+          size: 0.6 + Math.random() * 0.6,
+          color: '#d4b896'
+        });
+      }
+    }
+  }
+  // Update dig particles
+  digParticles = digParticles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.15; // gravity
+    p.life--;
+    return p.life > 0;
+  });
+
+  // Shell inspection
+  if (isInspecting) {
+    inspectProgress += 0.02;
+    if (inspectProgress >= 1) {
+      isInspecting = false;
+    }
+  }
+  
+  // Crab eats nearby food
+  if (state.foodItems.length > 0 && !isInspecting) {
+    const nearestFood = state.foodItems.find(f => !f.eating);
+    if (nearestFood) {
+      const fx = nearestFood.x - crabX;
+      const fy = nearestFood.y - crabY;
+      const foodDist = Math.sqrt(fx * fx + fy * fy);
+      if (foodDist < 25) {
+        // Close enough to eat! Crab pauses and munches
+        nearestFood.eating = true;
+        // Slow crab movement while eating
+        crabWalkFrame += 0.2;
+      } else if (foodDist < 100) {
+        // Walk toward food (slightly faster when hungry!)
+        crabTargetX = nearestFood.x;
+        crabTargetY = nearestFood.y;
+      }
+    }
+  }
+  
+  // Slow stat decay and overgrowth
+  if (state.time % 180 === 0) { // ~3 seconds
+    state.stats.hunger = Math.max(0, state.stats.hunger - 1);
+    state.stats.happiness = Math.max(0, state.stats.happiness - 1);
+    // Beach slowly gets dirty
+    state.beach.cleanliness = Math.max(0, state.beach.cleanliness - 1);
+    // Low hunger = health penalty
+    if (state.stats.hunger < 20) {
+      state.stats.health = Math.max(0, state.stats.health - 1);
+    }
+    // Anemone glow slowly returns to baseline
+    if (state.anemone) {
+      state.anemone.glow = Math.max(0, (state.anemone.glow || 0) - 0.05);
+    }
+    updateUI();
+  }
+  // Overgrowth grows over time (every ~5 seconds)
+  if (state.time % 1800 === 0 && state.beach.overgrowth.length < 5) {
+    const patch = {
+      x: W * 0.15 + Math.random() * W * 0.45,
+      y: H * 0.45 + Math.random() * H * 0.10,
+      size: 14 + Math.random() * 10,
+      angle: Math.random() * Math.PI,
+      spawnTime: state.time
+    };
+    state.beach.overgrowth.push(patch);
+    state.beach.cleanliness = Math.max(0, state.beach.cleanliness - 3);
+  }
+  // Existing overgrowth slowly grows (up to 30px)
+  if (state.time % 3600 === 0) {
+    state.beach.overgrowth.forEach(patch => {
+      patch.size = Math.min(30, patch.size + 2);
+    });
+  }
+  // Dirty beach = unhappy crab
+  if (state.beach.cleanliness < 30) {
+    state.stats.happiness = Math.max(0, state.stats.happiness - 0.01);
+  }
+  // Kelp grows NATURALLY when beach is clean (not from cleaning!)
+  // 1 kelp stalk every ~50 seconds at 70%+
+  if (state.beach.cleanliness > 70 && state.beach.kelpGrowth < 3 && state.time % 3000 === 0) {
+    state.beach.kelpGrowth++;
+  }
+  // Remove old food items
+  state.foodItems = state.foodItems.filter(f => state.time - f.spawnTime < 3600);
+  
+  // Draw
+  const tier = getDepthTier();
+  try {
+    ctx.clearRect(0, 0, W, H);
+    drawHabitat(tier);
+    // Algae grows on the sand floor — crab walks OVER it
+    drawOvergrowth();
+    // Draw dig marks — little holes in the sand where the crab dug!
+    if (state.beach.digMarks && state.beach.digMarks.length > 0) {
+      ctx.save();
+      state.beach.digMarks.forEach(mark => {
+        mark.age++;
+        const alpha = Math.max(0, 1 - mark.age / 600); // Fade over ~10 seconds
+        if (alpha <= 0) return;
+        // Outer shadow — bigger!
+        ctx.beginPath();
+        ctx.ellipse(mark.x, mark.y + 10, 18, 9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(120, 100, 70, ${alpha * 0.4})`;
+        ctx.fill();
+        // Inner hole
+        ctx.beginPath();
+        ctx.ellipse(mark.x, mark.y + 10, 12, 6, 0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(90, 75, 50, ${alpha * 0.55})`;
+        ctx.fill();
+        // Deepest center
+        ctx.beginPath();
+        ctx.ellipse(mark.x, mark.y + 10, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(50, 40, 25, ${alpha * 0.5})`;
+        ctx.fill();
+        // Little sand pile to one side (hermit crabs scoop to one side!)
+        ctx.beginPath();
+        ctx.ellipse(mark.x + 14, mark.y + 15, 8, 4, 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(210, 190, 150, ${alpha * 0.45})`;
+        ctx.fill();
+      });
+      // Clean up fully faded marks
+      state.beach.digMarks = state.beach.digMarks.filter(m => m.age < 600);
+      ctx.restore();
+    }
+    drawFoodItems();
+    // Beach items (kelp, collectibles) draw BEFORE the crab so crab walks in front
+    drawBeachItems();
+    crabX = Math.max(W * 0.15, Math.min(W * 0.8, Number.isFinite(crabX) ? crabX : W * 0.45));
+    crabY = Math.max(H * 0.32, Math.min(H * 0.60, Number.isFinite(crabY) ? crabY : H * 0.45));
+    drawCompositedCrab(ctx, tier, state);
+    // Dig animation — sand spray at ground level (not mouth level!)
+    if (isDigging) {
+      ctx.save();
+      ctx.translate(crabX, crabY);
+      // Position just below body where legs meet sand
+      const sprayY = state.shell.tier === 0 ? 12 : state.shell.tier === 1 ? 10 : 8;
+      for (let i = 0; i < 2; i++) {
+        const sx = (Math.random() - 0.5) * 10;
+        ctx.beginPath();
+        ctx.arc(sx, sprayY, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(196, 168, 130, ' + (0.2 + Math.random() * 0.2) + ')';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    // Beach items now drawn before crab (see above)
+    // Pet animation — little floating hearts when you pet the crab!
+    if (petAnimTimer > 0) {
+      const petProgress = petAnimTimer / 20; // 1.0 → 0.0
+      const heartY = crabY - 30 - (1 - petProgress) * 20; // Float upward
+      const heartAlpha = petProgress; // Fade out
+      ctx.save();
+      ctx.font = `${16 + (1 - petProgress) * 8}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(255, 100, 150, ${heartAlpha})`;
+      ctx.fillText('❤', crabX, heartY);
+      // Second heart offset
+      if (petProgress > 0.3) {
+        ctx.font = `${13 + (1 - petProgress) * 5}px sans-serif`;
+        ctx.fillStyle = `rgba(255, 150, 180, ${heartAlpha * 0.7})`;
+        ctx.fillText('❤', crabX + 15, heartY - 5);
+      }
+      ctx.restore();
+    }
+    // Sand dig particles
+    if (digParticles.length > 0) {
+      digParticles.forEach(p => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.min(1, p.life / 10);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+    // Anemone draws inside drawCompositedCrab now
+
+    // Draw vacancy chain (just drifting shells, no bg crabs)
+    updateVacancyChain();
+    // Draw washed-up shell (on top of everything!)
+    drawPendingShell();
+    drawVacancyShells();
+    // Draw celebration burst (golden sparkles when shell upgrades!)
+    if (state.celebrationBurst) drawCelebrationBurst(ctx);
+    // Draw found item notification
+    drawFoundItemPopup(ctx);
+    // Draw collection modal on top of everything
+    if (state.showBeachCollection) drawBeachCollectionModal(ctx);
+    if (state.showCollection) drawCollectionModal(ctx);
+  } catch(e) {
+    // Emergency fallback — log the error
+    console.error('Render error:', e);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#E8785A";
+    ctx.beginPath();
+    ctx.arc(W * 0.45, H * 0.58, 20, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Inspection or shell upgrade overlay
+  if (isInspecting) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(W/2 - 50, H * 0.45, 100, 3);
+  }
+  
+  // Shell upgrade assessment animation — 5-stage ritual
+  if (state.shell.upgrading) {
+    drawAssessmentAnimation(ctx, W, H, state, crabX, crabY);
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+// Ambient sound — occasional bubbles
+let lastBubbleSound = 0;
+function maybeAmbientBubble(t) {
+  if (t - lastBubbleSound > 600 && Math.random() < 0.005) { // ~every 10-20s
+    SFX.bubble();
+    lastBubbleSound = t;
+  }
+}
+
+// Start
+updateUI();
+animate();
+</script>
+</body>
+</html>

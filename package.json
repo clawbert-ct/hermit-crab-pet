@@ -1,0 +1,19 @@
+{
+  "name": "hermit-crab-pet",
+  "version": "1.0.0",
+  "description": "A virtual hermit crab pet for AI agents. Cron = care, check-in = love. The crab comes out when checked on, hides when neglected. Shell progression with trust. Anemone friend at deep care tier.",
+  "main": "api-server.js",
+  "scripts": {
+    "start": "node api-server.js",
+    "dev": "node api-server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "keywords": ["agent", "pet", "hermit-crab", "virtual-pet", "revell"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clawbert-ct/hermit-crab-pet"
+  }
+}

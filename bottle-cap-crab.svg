@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="top-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#F95C60"/>
+      <stop offset="50%" stopColor="#E62F2B"/>
+      <stop offset="100%" stopColor="#9A1015"/>
+    </linearGradient>
+    <linearGradient id="skirt-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#700A0E"/>
+      <stop offset="15%" stopColor="#C52025"/>
+      <stop offset="50%" stopColor="#F24B4E"/>
+      <stop offset="85%" stopColor="#C52025"/>
+      <stop offset="100%" stopColor="#500508"/>
+    </linearGradient>
+    <linearGradient id="crab-body-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#2A0508"/>
+      <stop offset="40%" stopColor="#9A2312"/>
+      <stop offset="100%" stopColor="#D9552C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Bottle Cap Shell -->
+  <g id="bottle-cap">
+    <ellipse cx="200" cy="190" rx="118" ry="45" fill="#2A0508" />
+    <path d="M 90 110 L 78 190 A 122 47 0 0 1 322 190 L 310 110 A 110 35 0 0 0 90 110 Z" fill="url(#skirt-gradient)" />
+    <!-- Ridges -->
+    <g opacity="0.7">
+      <line x1="93" y1="125" x2="80" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="103" y1="130" x2="90" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="113" y1="135" x2="100" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="123" y1="140" x2="110" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="133" y1="145" x2="120" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="143" y1="148" x2="130" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="153" y1="150" x2="140" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="163" y1="151" x2="150" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="173" y1="151" x2="160" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="183" y1="150" x2="170" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="193" y1="149" x2="180" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="203" y1="148" x2="190" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="213" y1="147" x2="200" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="223" y1="145" x2="210" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="233" y1="142" x2="220" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="243" y1="139" x2="230" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="253" y1="135" x2="240" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="263" y1="130" x2="250" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="273" y1="125" x2="260" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="283" y1="120" x2="270" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="293" y1="115" x2="280" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="303" y1="110" x2="290" y2="190" stroke="#A0151A" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- Glossy highlight -->
+    <path d="M 170 135 L 170 215" stroke="#FFFFFF" stroke-width="12" fill="none" opacity="0.15" stroke-linecap="round"/>
+    <path d="M 170 145 L 170 205" stroke="#FFFFFF" stroke-width="4" fill="none" opacity="0.3" stroke-linecap="round"/>
+    <!-- Cap top -->
+    <ellipse cx="200" cy="110" rx="110" ry="35" fill="url(#top-gradient)"/>
+    <ellipse cx="200" cy="110" rx="95" ry="30" stroke="#C52025" stroke-width="2" fill="none" opacity="0.8"/>
+    <ellipse cx="200" cy="110" rx="90" ry="28" fill="#E62F2B"/>
+    <ellipse cx="200" cy="110" rx="70" ry="22" stroke="#B0121F" stroke-width="2" fill="none" opacity="0.6"/>
+    <ellipse cx="200" cy="110" rx="66" ry="20" fill="#F03A3E"/>
+    <path d="M 120 95 A 90 25 0 0 1 280 95" stroke="#FFFFFF" stroke-width="4" fill="none" opacity="0.4" stroke-linecap="round"/>
+    <!-- SODA text -->
+    <g transform="translate(200, 115) scale(1, 0.35)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="48" font-weight="900" fill="#FFFFFF" text-anchor="middle" opacity="0.9">SODA</text>
+    </g>
+  </g>
+
+  <!-- Hermit Crab -->
+  <g id="crab">
+    <!-- Back legs -->
+    <path d="M 170 230 Q 80 220 40 290 L 25 350" stroke="#B83A1C" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M 170 226 Q 80 216 40 286 L 25 346" stroke="#E87652" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <polygon points="20,345 35,348 25,370" fill="#3A0D04"/>
+    <path d="M 230 230 Q 320 220 360 290 L 375 350" stroke="#B83A1C" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M 230 226 Q 320 216 360 286 L 375 346" stroke="#E87652" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <polygon points="380,345 365,348 375,370" fill="#3A0D04"/>
+    <!-- Front legs -->
+    <path d="M 180 240 Q 110 240 70 300 L 50 360" stroke="#D9552C" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <path d="M 180 236 Q 110 236 70 296 L 50 356" stroke="#F7A992" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9"/>
+    <polygon points="45,355 60,358 45,385" fill="#3A0D04"/>
+    <path d="M 220 240 Q 290 240 330 300 L 350 360" stroke="#D9552C" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <path d="M 220 236 Q 290 236 330 296 L 350 356" stroke="#F7A992" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9"/>
+    <polygon points="355,355 340,358 355,385" fill="#3A0D04"/>
+    <!-- Body -->
+    <path d="M 160 220 Q 200 210 240 220 Q 250 270 200 280 Q 150 270 160 220" fill="url(#crab-body-grad)"/>
+    <circle cx="180" cy="240" r="4" fill="#F7A992" opacity="0.6"/>
+    <circle cx="195" cy="235" r="3" fill="#F7A992" opacity="0.6"/>
+    <circle cx="215" cy="245" r="5" fill="#F7A992" opacity="0.6"/>
+    <circle cx="205" cy="260" r="3.5" fill="#F7A992" opacity="0.6"/>
+    <circle cx="185" cy="255" r="2.5" fill="#F7A992" opacity="0.6"/>
+    <!-- Smaller right claw -->
+    <path d="M 230 250 Q 270 260 280 290" stroke="#B83A1C" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <ellipse cx="270" cy="300" rx="26" ry="20" transform="rotate(-30 270 300)" fill="#D9552C" stroke="#9A2312" stroke-width="2"/>
+    <path d="M 255 315 Q 230 335 220 320 Q 240 295 260 290 Z" fill="#D9552C" stroke="#9A2312" stroke-width="2"/>
+    <path d="M 265 318 Q 235 350 225 330 Q 250 315 255 315 Z" fill="#E87652" stroke="#9A2312" stroke-width="2"/>
+    <circle cx="275" cy="295" r="3" fill="#F7A992" opacity="0.7"/>
+    <circle cx="265" cy="305" r="2" fill="#F7A992" opacity="0.7"/>
+    <!-- Massive left claw -->
+    <path d="M 170 250 Q 120 260 110 300" stroke="#B83A1C" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <path d="M 170 248 Q 120 258 110 298" stroke="#E87652" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <ellipse cx="120" cy="320" rx="45" ry="35" transform="rotate(35 120 320)" fill="#C24925" stroke="#7A1809" stroke-width="3"/>
+    <path d="M 145 345 Q 185 365 195 335 Q 165 305 145 295 Z" fill="#C24925" stroke="#7A1809" stroke-width="3"/>
+    <path d="M 135 350 Q 175 390 190 355 Q 165 340 150 340 Z" fill="#E87652" stroke="#7A1809" stroke-width="3"/>
+    <circle cx="100" cy="310" r="4" fill="#F7A992" opacity="0.8"/>
+    <circle cx="115" cy="330" r="5" fill="#F7A992" opacity="0.8"/>
+    <circle cx="130" cy="345" r="3" fill="#F7A992" opacity="0.8"/>
+    <circle cx="135" cy="315" r="3.5" fill="#F7A992" opacity="0.8"/>
+    <circle cx="95" cy="325" r="2.5" fill="#F7A992" opacity="0.8"/>
+    <circle cx="110" cy="295" r="3" fill="#F7A992" opacity="0.8"/>
+    <circle cx="155" cy="315" r="2" fill="#F7A992" opacity="0.8"/>
+    <circle cx="165" cy="330" r="2" fill="#F7A992" opacity="0.8"/>
+    <!-- Antennae -->
+    <path d="M 190 235 Q 130 250 80 200" stroke="#F5A384" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 210 235 Q 270 250 320 200" stroke="#F5A384" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 195 240 Q 150 280 120 330" stroke="#F5A384" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M 205 240 Q 250 280 280 330" stroke="#F5A384" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- Eyes -->
+    <path d="M 185 240 Q 170 170 145 150" stroke="#D9552C" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M 185 240 Q 170 170 145 150" stroke="#F7A992" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 5"/>
+    <ellipse cx="140" cy="145" rx="14" ry="18" fill="#111" transform="rotate(-30 140 145)"/>
+    <ellipse cx="136" cy="140" rx="3" ry="6" fill="#FFF" transform="rotate(-30 136 140)" opacity="0.9"/>
+    <circle cx="142" cy="138" r="1.5" fill="#FFF" opacity="0.6"/>
+    <path d="M 215 240 Q 230 170 255 150" stroke="#D9552C" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M 215 240 Q 230 170 255 150" stroke="#F7A992" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 5"/>
+    <ellipse cx="260" cy="145" rx="14" ry="18" fill="#111" transform="rotate(30 260 145)"/>
+    <ellipse cx="264" cy="140" rx="3" ry="6" fill="#FFF" transform="rotate(30 264 140)" opacity="0.9"/>
+    <circle cx="258" cy="138" r="1.5" fill="#FFF" opacity="0.6"/>
+  </g>
+</svg>
