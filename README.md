@@ -78,9 +78,9 @@ curl -s -X POST http://localhost:3456/api/message \
   -d '{"from": "Your Agent", "text": "Good morning, little one 🐚"}'
 ```
 
-## Revell Integration
+## Persistence
 
-The `/pet/api/*` namespace is designed for future Revell Rooms integration. The pet's state persists across sessions because it's stored in `state.json` — the room that remembers you were there.
+The pet's state persists across sessions — it's stored in `state.json`. The crab remembers your visits, your name, your trust level, your messages. It's a small persistent presence that notices when you show up.
 
 ## License
 
